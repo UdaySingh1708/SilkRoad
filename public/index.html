@@ -3,148 +3,137 @@
 
 <head>
 
-    <meta charset="UTF-8">
+<meta charset="UTF-8">
 
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>Silk Road Anonymous Chat</title>
+<title>Silk Road - Anonymous Chat with Strangers Online</title>
 
-    <link rel="stylesheet" href="style.css">
+<meta name="description" content="Silk Road is a free anonymous chat platform where you can instantly talk with random strangers worldwide without registration.">
+
+<meta name="keywords" content="anonymous chat, stranger chat, random chat, omegle alternative, anonymous messaging, silk road chat, online chat">
+
+<meta name="author" content="Silk Road">
+
+<meta name="robots" content="index, follow">
+
+<link rel="canonical" href="https://silkroadchat.onrender.com/">
+
+<meta property="og:type" content="website">
+<meta property="og:title" content="Silk Road Anonymous Chat">
+<meta property="og:description" content="Meet random strangers instantly with Silk Road Anonymous Chat.">
+<meta property="og:url" content="https://silkroadchat.onrender.com/">
+<meta property="og:site_name" content="Silk Road">
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Silk Road Anonymous Chat">
+<meta name="twitter:description" content="Free anonymous stranger chat platform.">
+
+<link rel="stylesheet" href="style.css">
+
+<script type="application/ld+json">
+{
+  "@context":"https://schema.org",
+  "@type":"WebSite",
+  "name":"Silk Road",
+  "url":"https://silkroadchat.onrender.com/",
+  "description":"Anonymous random stranger chat website.",
+  "potentialAction":{
+    "@type":"SearchAction",
+    "target":"https://silkroadchat.onrender.com/",
+    "query-input":"required name=query"
+  }
+}
+</script>
 
 </head>
 
-
 <body>
-
 
 <div class="container">
 
+<div class="header">
 
-    <div class="header">
+<h1>Silk Road</h1>
 
-        <h1>Silk Road</h1>
+<p>Anonymous Stranger Chat</p>
 
-        <p>Anonymous Stranger Chat</p>
-
-        <div id="onlineCount">
-            Online: 0
-        </div>
-
-    </div>
-
-
-
-
-    <div id="home" class="card">
-
-
-        <h2>Talk with strangers</h2>
-
-
-        <p>
-            Connect instantly with random people around the world.
-        </p>
-
-
-        <button id="startBtn">
-            Start Chat
-        </button>
-
-
-    </div>
-
-
-
-
-
-    <div id="chat" class="card hidden">
-
-
-        <div class="status">
-
-            <span id="status">
-                Waiting...
-            </span>
-
-
-        </div>
-
-
-
-
-        <div id="messages" class="messages">
-
-        </div>
-
-
-
-
-        <div id="typing">
-
-        </div>
-
-
-
-
-        <div class="controls">
-
-
-            <input 
-            id="messageInput"
-            type="text"
-            placeholder="Type message..."
-            autocomplete="off"
-            >
-
-
-
-            <button id="sendBtn">
-                Send
-            </button>
-
-
-        </div>
-
-
-
-
-        <div class="buttons">
-
-
-            <button id="nextBtn">
-                Next Stranger
-            </button>
-
-
-            <button id="disconnectBtn">
-                Disconnect
-            </button>
-<button id="reportBtn" class="danger-btn">
-    🚩 Report
-</button>
-
-<button id="blockBtn" class="danger-btn">
-    🚫 Block
-</button>
-
-        </div>
-
-
-
-    </div>
-
-
+<div id="onlineCount">
+Online: 0
+</div>
 
 </div>
 
+<div id="home" class="card">
 
+<h2>Talk with Strangers Instantly</h2>
 
+<p>
+Silk Road lets you anonymously connect with random people around the world in real time.
+No registration required.
+</p>
 
+<button id="startBtn">
+Start Chat
+</button>
+
+</div>
+
+<div id="chat" class="card hidden">
+
+<div class="status">
+
+<span id="status">
+Waiting...
+</span>
+
+</div>
+
+<div id="messages"></div>
+
+<div id="typing"></div>
+
+<div class="controls">
+
+<input
+id="messageInput"
+type="text"
+placeholder="Type message..."
+autocomplete="off">
+
+<button id="sendBtn">
+Send
+</button>
+
+</div>
+
+<div class="buttons">
+
+<button id="nextBtn">
+Next Stranger
+</button>
+
+<button id="disconnectBtn">
+Disconnect
+</button>
+
+<button id="reportBtn" class="danger-btn">
+🚩 Report
+</button>
+
+<button id="blockBtn" class="danger-btn">
+🚫 Block
+</button>
+
+</div>
+
+</div>
+
+</div>
 
 <script src="/socket.io/socket.io.js"></script>
 
 <script src="app.js"></script>
-
 
 </body>
 
