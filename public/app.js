@@ -1,6 +1,5 @@
 const socket = io();
 
-
 const home = document.getElementById("home");
 const chat = document.getElementById("chat");
 
@@ -20,8 +19,7 @@ const onlineCount = document.getElementById("onlineCount");
 let connected = false;
 
 
-
-function addMessage(text, type){
+function addMessage(text, type) {
 
     const div = document.createElement("div");
 
@@ -44,14 +42,9 @@ function startSearching(){
     chat.classList.remove("hidden");
 
 
-    messages.innerHTML="";
+    messages.innerHTML = "";
 
-    status.textContent="Searching for stranger...";
-
-    typing.textContent="";
-
-    connected=false;
-
+    status.textContent = "Searching...";
 
     socket.emit("findPartner");
 
@@ -59,13 +52,16 @@ function startSearching(){
 
 
 
-
 function sendMessage(){
 
-    const text=input.value.trim();
+    let text = input.value.trim();
 
 
-    if(!connected || text==="") return;
+    if(!text || !connected){
+
+        return;
+
+    }
 
 
     socket.emit(
@@ -88,226 +84,161 @@ function sendMessage(){
 
 
 
-startBtn.onclick=startSearching;
+startBtn.onclick = startSearching;
 
 
-
-sendBtn.onclick=sendMessage;
-
-
-
-input.addEventListener(
-"keydown",
-(e)=>{
-
-    if(e.key==="Enter"){
-
-        e.preventDefault();
-
-        sendMessage();
-
-    }
-
-});
+sendBtn.onclick = sendMessage;
 
 
 
 input.addEventListener(
-"input",
-()=>{
+    "keydown",
+    function(e){
 
+        if(e.key === "Enter"){
 
-    if(!connected) return;
+            e.preventDefault();
 
+            sendMessage();
 
-    if(input.value.length>0){
-
-        socket.emit("typing");
-
-    }else{
-
-        socket.emit("stopTyping");
+        }
 
     }
-
-
-});
-
+);
 
 
 
-nextBtn.onclick=()=>{
+input.addEventListener(
+    "input",
+    ()=>{
 
+        if(!connected) return;
+
+
+        if(input.value.length > 0){
+
+            socket.emit("typing");
+
+        }
+        else{
+
+            socket.emit("stopTyping");
+
+        }
+
+    }
+);
+
+
+
+nextBtn.onclick = ()=>{
 
     messages.innerHTML="";
 
-    typing.textContent="";
-
-
-    status.textContent=
-    "Searching for new stranger...";
-
+    status.textContent="Searching for new stranger...";
 
     connected=false;
 
 
     socket.emit("next");
 
-
 };
 
 
 
-
-
-disconnectBtn.onclick=()=>{
-
-
-    socket.disconnect();
-
+disconnectBtn.onclick = ()=>{
 
     location.reload();
 
-
 };
 
 
 
 
-
 socket.on(
-"matched",
-()=>{
+    "matched",
+    ()=>{
 
+        connected=true;
 
-    connected=true;
-
-
-    status.textContent=
-    "Connected to stranger";
-
-
-});
-
-
-
-
-
-socket.on(
-"waiting",
-()=>{
-
-
-    status.textContent=
-    "Waiting for stranger...";
-
-
-});
-
-
-
-
-
-socket.on(
-"message",
-(msg)=>{
-
-
-    if(typeof msg==="string"){
-
-        addMessage(
-            msg,
-            "stranger"
-        );
-
-    }else{
-
-
-        addMessage(
-            msg.message,
-            "stranger"
-        );
+        status.textContent="Connected to stranger";
 
     }
-
-
-});
-
-
+);
 
 
 
 socket.on(
-"typing",
-()=>{
+    "message",
+    (data)=>{
 
 
-    typing.textContent=
-    "Stranger is typing...";
+        if(typeof data === "string"){
+
+            addMessage(
+                data,
+                "stranger"
+            );
+
+        }
+        else{
+
+            addMessage(
+                data.message,
+                "stranger"
+            );
+
+        }
 
 
-});
-
-
-
-
-
-socket.on(
-"stopTyping",
-()=>{
-
-
-    typing.textContent="";
-
-
-});
-
-
-
-
-
-socket.on(
-"partnerLeft",
-()=>{
-
-
-    connected=false;
-
-
-    status.textContent=
-    "Stranger disconnected";
-
-
-    typing.textContent="";
-
-
-});
-
-
+    }
+);
 
 
 
 socket.on(
-"onlineCount",
-(count)=>{
+    "typing",
+    ()=>{
 
+        typing.textContent="Stranger typing...";
 
-    onlineCount.textContent=
-    "Online: " + count;
-
-
-});
-
-
+    }
+);
 
 
 
 socket.on(
-"connect",
-()=>{
+    "stopTyping",
+    ()=>{
 
-    console.log(
-        "Connected to server"
-    );
+        typing.textContent="";
 
-});
+    }
+);
+
+
+
+socket.on(
+    "partnerLeft",
+    ()=>{
+
+        connected=false;
+
+        status.textContent="Stranger disconnected";
+
+        typing.textContent="";
+
+    }
+);
+
+
+
+socket.on(
+    "onlineCount",
+    (count)=>{
+
+        onlineCount.textContent =
+        "Online: " + count;
+
+    }
+);
