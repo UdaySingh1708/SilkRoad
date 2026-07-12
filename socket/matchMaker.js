@@ -1,34 +1,83 @@
 "use strict";
 
-let waitingUser = null;
+/*
+==========================================
+Silk Road Match Maker
+Professional Version
+==========================================
+*/
+
+const waitingQueue = [];
 
 const partners = new Map();
 
+const blockedUsers = new Map();
+
+/*
+------------------------------------------
+Block System
+------------------------------------------
+*/
+
+function isBlocked(userA, userB) {
+
+    const listA = blockedUsers.get(userA);
+
+    if (listA && listA.has(userB)) {
+        return true;
+    }
+
+    const listB = blockedUsers.get(userB);
+
+    if (listB && listB.has(userA)) {
+        return true;
+    }
+
+    return false;
+
+}
+
+/*
+------------------------------------------
+Exports
+------------------------------------------
+*/
 
 module.exports = {
 
     find(id) {
 
-        if (waitingUser && waitingUser !== id) {
+        for (let i = 0; i < waitingQueue.length; i++) {
 
-            const partner = waitingUser;
+            const stranger = waitingQueue[i];
 
-            waitingUser = null;
+            if (stranger === id) {
+                continue;
+            }
 
-            return partner;
+            if (isBlocked(id, stranger)) {
+                continue;
+            }
+
+            waitingQueue.splice(i, 1);
+
+            return stranger;
 
         }
 
         return null;
-    },
 
+    },
 
     wait(id) {
 
-        waitingUser = id;
+        if (!waitingQueue.includes(id)) {
+
+            waitingQueue.push(id);
+
+        }
 
     },
-
 
     setPartner(user1, user2) {
 
@@ -38,21 +87,29 @@ module.exports = {
 
     },
 
-
     getPartner(id) {
 
         return partners.get(id);
 
     },
 
+    block(user1, user2) {
+
+        if (!blockedUsers.has(user1)) {
+
+            blockedUsers.set(user1, new Set());
+
+        }
+
+        blockedUsers.get(user1).add(user2);
+
+    },
 
     remove(id) {
 
         const partner = partners.get(id);
 
-
         partners.delete(id);
-
 
         if (partner) {
 
@@ -60,13 +117,13 @@ module.exports = {
 
         }
 
+        const index = waitingQueue.indexOf(id);
 
-        if (waitingUser === id) {
+        if (index !== -1) {
 
-            waitingUser = null;
+            waitingQueue.splice(index, 1);
 
         }
-
 
         return partner;
 
