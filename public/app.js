@@ -1,3 +1,5 @@
+"use strict";
+
 const socket = io();
 
 const home = document.getElementById("home");
@@ -6,8 +8,10 @@ const chat = document.getElementById("chat");
 const startBtn = document.getElementById("startBtn");
 const nextBtn = document.getElementById("nextBtn");
 const disconnectBtn = document.getElementById("disconnectBtn");
-
+const reportBtn = document.getElementById("reportBtn");
+const blockBtn = document.getElementById("blockBtn");
 const sendBtn = document.getElementById("sendBtn");
+
 const input = document.getElementById("messageInput");
 
 const messages = document.getElementById("messages");
@@ -15,9 +19,7 @@ const status = document.getElementById("status");
 const typing = document.getElementById("typing");
 const onlineCount = document.getElementById("onlineCount");
 
-
 let connected = false;
-
 
 function addMessage(text, type) {
 
@@ -33,212 +35,202 @@ function addMessage(text, type) {
 
 }
 
+function clearChat() {
 
+    messages.innerHTML = "";
 
-function startSearching(){
+    typing.textContent = "";
+
+}
+
+function startSearching() {
 
     home.classList.add("hidden");
 
     chat.classList.remove("hidden");
 
+    clearChat();
 
-    messages.innerHTML = "";
+    connected = false;
 
-    status.textContent = "Searching...";
+    status.textContent = "Searching for a stranger...";
 
     socket.emit("findPartner");
 
 }
 
+function sendMessage() {
 
+    const text = input.value.trim();
 
-function sendMessage(){
+    if (!connected || text === "") return;
 
-    let text = input.value.trim();
+    socket.emit("message", text);
 
+    addMessage(text, "me");
 
-    if(!text || !connected){
-
-        return;
-
-    }
-
-
-    socket.emit(
-        "message",
-        text
-    );
-
-
-    addMessage(
-        text,
-        "me"
-    );
-
-
-    input.value="";
+    input.value = "";
 
     socket.emit("stopTyping");
 
 }
 
+startBtn.addEventListener("click", startSearching);
 
+sendBtn.addEventListener("click", sendMessage);
 
-startBtn.onclick = startSearching;
+input.addEventListener("keydown", function (e) {
 
+    if (e.key === "Enter") {
 
-sendBtn.onclick = sendMessage;
+        e.preventDefault();
 
-
-
-input.addEventListener(
-    "keydown",
-    function(e){
-
-        if(e.key === "Enter"){
-
-            e.preventDefault();
-
-            sendMessage();
-
-        }
+        sendMessage();
 
     }
-);
 
+});
 
+input.addEventListener("input", function () {
 
-input.addEventListener(
-    "input",
-    ()=>{
+    if (!connected) return;
 
-        if(!connected) return;
+    if (input.value.length > 0) {
 
+        socket.emit("typing");
 
-        if(input.value.length > 0){
+    } else {
 
-            socket.emit("typing");
-
-        }
-        else{
-
-            socket.emit("stopTyping");
-
-        }
+        socket.emit("stopTyping");
 
     }
-);
 
+});
 
+nextBtn.addEventListener("click", function () {
 
-nextBtn.onclick = ()=>{
+    clearChat();
 
-    messages.innerHTML="";
+    connected = false;
 
-    status.textContent="Searching for new stranger...";
-
-    connected=false;
-
+    status.textContent = "Searching for a new stranger...";
 
     socket.emit("next");
 
-};
+});
 
-
-
-disconnectBtn.onclick = ()=>{
+disconnectBtn.addEventListener("click", function () {
 
     location.reload();
 
-};
+});
 
+reportBtn.addEventListener("click", function () {
 
+    if (!connected) {
 
+        alert("You are not connected to anyone.");
 
-socket.on(
-    "matched",
-    ()=>{
-
-        connected=true;
-
-        status.textContent="Connected to stranger";
+        return;
 
     }
-);
 
+    socket.emit("reportPartner");
 
+    alert("Thank you. This user has been reported.");
 
-socket.on(
-    "message",
-    (data)=>{
+});
 
+blockBtn.addEventListener("click", function () {
 
-        if(typeof data === "string"){
+    if (!connected) {
 
-            addMessage(
-                data,
-                "stranger"
-            );
+        alert("You are not connected to anyone.");
 
-        }
-        else{
-
-            addMessage(
-                data.message,
-                "stranger"
-            );
-
-        }
-
+        return;
 
     }
-);
 
+    socket.emit("blockPartner");
 
+    connected = false;
 
-socket.on(
-    "typing",
-    ()=>{
+    clearChat();
 
-        typing.textContent="Stranger typing...";
+    status.textContent = "Blocked. Searching for another stranger...";
 
-    }
-);
+    socket.emit("next");
 
+});
 
+socket.on("matched", function () {
 
-socket.on(
-    "stopTyping",
-    ()=>{
+    connected = true;
 
-        typing.textContent="";
+    status.textContent = "Connected to a stranger";
 
-    }
-);
+});
 
+socket.on("waiting", function () {
 
+    connected = false;
 
-socket.on(
-    "partnerLeft",
-    ()=>{
+    status.textContent = "Waiting for a stranger...";
 
-        connected=false;
+});
 
-        status.textContent="Stranger disconnected";
+socket.on("message", function (data) {
 
-        typing.textContent="";
+    if (typeof data === "string") {
 
-    }
-);
+        addMessage(data, "stranger");
 
+    } else if (data && data.message) {
 
-
-socket.on(
-    "onlineCount",
-    (count)=>{
-
-        onlineCount.textContent =
-        "Online: " + count;
+        addMessage(data.message, "stranger");
 
     }
-);
+
+});
+
+socket.on("typing", function () {
+
+    typing.textContent = "Stranger is typing...";
+
+});
+
+socket.on("stopTyping", function () {
+
+    typing.textContent = "";
+
+});
+
+socket.on("partnerLeft", function () {
+
+    connected = false;
+
+    clearChat();
+
+    status.textContent = "Stranger disconnected. Searching again...";
+
+});
+
+socket.on("onlineCount", function (count) {
+
+    onlineCount.textContent = "Online: " + count;
+
+});
+
+socket.on("connect", function () {
+
+    console.log("Connected:", socket.id);
+
+});
+
+socket.on("disconnect", function () {
+
+    connected = false;
+
+    status.textContent = "Disconnected from server.";
+
+});
