@@ -4,203 +4,142 @@ require("dotenv").config();
 
 const express = require("express");
 const http = require("http");
-const path = require("path");
+const { Server } = require("socket.io");
 
 const helmet = require("helmet");
 const compression = require("compression");
 const cors = require("cors");
 const rateLimit = require("express-rate-limit");
 
-const { Server } = require("socket.io");
-
 const socketHandler = require("./socket/socketHandler");
 
 
 const app = express();
 
-const server = http.createServer(app);
 
-
-const PORT = process.env.PORT || 3000;
-
-
-
-const io = new Server(server, {
-
-    cors: {
-
-        origin: process.env.CLIENT_URL || "*",
-
-        methods:["GET","POST"]
-
-    },
-
-
-    transports:[
-        "websocket",
-        "polling"
-    ],
-
-
-    pingTimeout:
-    Number(process.env.PING_TIMEOUT) || 20000,
-
-
-    pingInterval:
-    Number(process.env.PING_INTERVAL) || 25000
-
-});
-
-
-
-
-
-app.disable("x-powered-by");
-
-
-
+// Security middleware
 app.use(
-
     helmet({
-
-        contentSecurityPolicy:false
-
+        contentSecurityPolicy: false
     })
-
 );
-
-
 
 app.use(compression());
 
-
-
-app.use(
-
-    cors({
-
-        origin:process.env.CLIENT_URL || "*"
-
-    })
-
-);
-
-
+app.use(cors());
 
 app.use(express.json());
 
 
-
+// Rate limiting
 const limiter = rateLimit({
 
-    windowMs:60 * 1000,
+    windowMs: 60 * 1000,
 
-    max:120
+    max: 100,
+
+    message: {
+        error: "Too many requests. Try again later."
+    }
 
 });
 
 
-
-app.use("/api",limiter);
-
+app.use(limiter);
 
 
+// Static files
 app.use(
-
-    express.static(
-
-        path.join(__dirname,"public")
-
-    )
-
+    express.static("public")
 );
 
 
-
-
-
-
-app.get("/api/health",(req,res)=>{
-
+// Health check
+app.get("/health", (req, res)=>{
 
     res.json({
 
-        status:"online",
+        status: "online",
 
-        users:io.engine.clientsCount,
+        service: "Silk Road",
 
-        uptime:process.uptime()
+        time: new Date()
 
     });
 
+});
+
+
+// Create server
+const server = http.createServer(app);
+
+
+// Socket.io
+const io = new Server(server, {
+
+    cors: {
+
+        origin: "*",
+
+        methods: [
+            "GET",
+            "POST"
+        ]
+
+    },
+
+    transports: [
+        "websocket",
+        "polling"
+    ]
 
 });
 
 
-
-
-
-
-app.get("/",(req,res)=>{
-
-
-    res.sendFile(
-
-        path.join(
-            __dirname,
-            "public",
-            "index.html"
-        )
-
-    );
-
-
-});
-
-
-
-
-
-
+// Load socket system
 socketHandler(io);
 
 
+// Port
+const PORT = process.env.PORT || 3000;
 
 
+// Start server
+server.listen(PORT, ()=>{
 
+    console.log(`
+==============================
+ Silk Road Server Started
+==============================
 
-app.use((req,res)=>{
+URL:
+http://localhost:${PORT}
 
+Mode:
+${process.env.NODE_ENV || "development"}
 
-    res.status(404).json({
-
-        message:"Page not found"
-
-    });
-
+==============================
+`);
 
 });
 
 
-
-
-
-
-server.listen(PORT,()=>{
-
-
-    console.log("");
-
-    console.log("==============================");
-
-    console.log(" Silk Road Server Started ");
-
-    console.log("==============================");
+// Shutdown handling
+process.on("SIGINT", ()=>{
 
     console.log(
-        "URL: http://localhost:"+PORT
+        "Server shutting down..."
     );
 
-    console.log("");
+
+    server.close(()=>{
+
+        console.log(
+            "HTTP server closed."
+        );
+
+        process.exit(0);
+
+    });
 
 });
