@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Silk Road Anonymous Chat</title>
+
+    <link rel="stylesheet" href="style.css">
+
+</head>
+
+
+<body>
+
+
+<div class="container">
+
+
+    <div class="header">
+
+        <h1>Silk Road</h1>
+
+        <p>Anonymous Stranger Chat</p>
+
+        <div id="onlineCount">
+            Online: 0
+        </div>
+
+    </div>
+
+
+
+
+    <div id="home" class="card">
+
+
+        <h2>Talk with strangers</h2>
+
+
+        <p>
+            Connect instantly with random people around the world.
+        </p>
+
+
+        <button id="startBtn">
+            Start Chat
+        </button>
+
+
+    </div>
+
+
+
+
+
+    <div id="chat" class="card hidden">
+
+
+        <div class="status">
+
+            <span id="status">
+                Waiting...
+            </span>
+
+
+        </div>
+
+
+
+
+        <div id="messages" class="messages">
+
+        </div>
+
+
+
+
+        <div id="typing">
+
+        </div>
+
+
+
+
+        <div class="controls">
+
+
+            <input 
+            id="messageInput"
+            type="text"
+            placeholder="Type message..."
+            autocomplete="off"
+            >
+
+
+
+            <button id="sendBtn">
+                Send
+            </button>
+
+
+        </div>
+
+
+
+
+        <div class="buttons">
+
+
+            <button id="nextBtn">
+                Next Stranger
+            </button>
+
+
+            <button id="disconnectBtn">
+                Disconnect
+            </button>
+
+
+        </div>
+
+
+
+    </div>
+
+
+
+</div>
+
+
+
+
+
+<script src="/socket.io/socket.io.js"></script>
+
+<script src="app.js"></script>
+
+
+</body>
+
+</html>
