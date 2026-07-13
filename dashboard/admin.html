@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Silk Road Admin Panel</title>
+
+<style>
+
+body {
+
+    margin:0;
+
+    padding:30px;
+
+    font-family:Arial, sans-serif;
+
+    background:#f2f2f2;
+
+}
+
+
+.box {
+
+    max-width:1100px;
+
+    margin:auto;
+
+    background:white;
+
+    padding:25px;
+
+    border-radius:10px;
+
+}
+
+
+h1 {
+
+    text-align:center;
+
+}
+
+
+table {
+
+    width:100%;
+
+    border-collapse:collapse;
+
+    margin-top:20px;
+
+}
+
+
+th {
+
+    background:#222;
+
+    color:white;
+
+}
+
+
+th, td {
+
+    padding:12px;
+
+    border:1px solid #ddd;
+
+}
+
+
+button {
+
+    padding:8px 12px;
+
+    background:#d9534f;
+
+    color:white;
+
+    border:none;
+
+    border-radius:5px;
+
+    cursor:pointer;
+
+}
+
+
+button:hover {
+
+    opacity:.8;
+
+}
+
+
+#status {
+
+    text-align:center;
+
+    margin:15px;
+
+}
+
+
+</style>
+
+</head>
+
+
+<body>
+
+
+<div class="box">
+
+
+<h1>
+Silk Road Admin Panel
+</h1>
+
+
+<div id="status">
+Loading...
+</div>
+
+
+<table>
+
+
+<thead>
+
+<tr>
+
+<th>Reporter</th>
+
+<th>Reported User</th>
+
+<th>Reason</th>
+
+<th>Date</th>
+
+<th>Action</th>
+
+</tr>
+
+</thead>
+
+
+<tbody id="list">
+
+</tbody>
+
+
+</table>
+
+
+</div>
+
+
+
+<script>
+
+
+async function loadReports(){
+
+
+    const res =
+        await fetch("/admin/reports");
+
+
+    const data =
+        await res.json();
+
+
+    const list =
+        document.getElementById("list");
+
+
+    const status =
+        document.getElementById("status");
+
+
+    list.innerHTML="";
+
+
+    if(data.count === 0){
+
+        status.innerHTML =
+        "No reports available";
+
+        return;
+
+    }
+
+
+    status.innerHTML =
+    "Total Reports: " + data.count;
+
+
+
+    data.reports.forEach(r=>{
+
+
+        const row =
+        document.createElement("tr");
+
+
+        row.innerHTML = `
+
+
+        <td>${r.reporter}</td>
+
+
+        <td>${r.reportedUser}</td>
+
+
+        <td>${r.reason}</td>
+
+
+        <td>${new Date(r.createdAt).toLocaleString()}</td>
+
+
+        <td>
+
+<button onclick="banUser('${r.reportedUser}')">
+
+Ban
+
+</button>
+
+
+<button onclick="removeReport('${r._id}')">
+
+Delete
+
+</button>
+
+</td>
+
+
+        `;
+
+
+        list.appendChild(row);
+
+
+    });
+
+
+}
+
+
+
+async function removeReport(id){
+
+
+    await fetch(
+        "/admin/reports/"+id,
+        {
+            method:"DELETE"
+        }
+    );
+
+
+    loadReports();
+
+
+}
+
+
+async function banUser(id){
+
+
+    await fetch(
+        "/admin/ban",
+        {
+
+            method:"POST",
+
+            headers:{
+
+                "Content-Type":
+                "application/json"
+
+            },
+
+
+            body:JSON.stringify({
+
+                userId:id,
+
+                reason:
+                "Reported by users"
+
+            })
+
+        }
+    );
+
+
+    alert(
+        "User banned"
+    );
+
+
+}
+loadReports();
+
+
+</script>
+
+
+</body>
+
+</html>

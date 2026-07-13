@@ -1,25 +1,72 @@
 "use strict";
 
-const socket = io();
+/*
+==========================================
+Socket
+==========================================
+*/
 
-const home = document.getElementById("home");
-const chat = document.getElementById("chat");
+const socket = io({
+    transports: ["websocket", "polling"]
+});
+
+/*
+==========================================
+DOM
+==========================================
+*/
 
 const startBtn = document.getElementById("startBtn");
+const sendBtn = document.getElementById("sendBtn");
 const nextBtn = document.getElementById("nextBtn");
 const disconnectBtn = document.getElementById("disconnectBtn");
 const reportBtn = document.getElementById("reportBtn");
 const blockBtn = document.getElementById("blockBtn");
-const sendBtn = document.getElementById("sendBtn");
 
-const input = document.getElementById("messageInput");
+const home = document.getElementById("home");
+const chat = document.getElementById("chat");
 
-const messages = document.getElementById("messages");
 const status = document.getElementById("status");
 const typing = document.getElementById("typing");
+const messages = document.getElementById("messages");
+
+const input = document.getElementById("messageInput");
 const onlineCount = document.getElementById("onlineCount");
 
+/*
+==========================================
+Video Elements
+==========================================
+*/
+
+const localVideo = document.getElementById("localVideo");
+const remoteVideo = document.getElementById("remoteVideo");
+
+let localStream = null;
+let peer = null;
+
 let connected = false;
+
+const rtcConfig = {
+
+    iceServers: [
+
+        {
+            urls: "stun:stun.l.google.com:19302"
+        },
+        {
+            urls: "stun:stun1.l.google.com:19302"
+        }
+
+    ]
+
+};
+
+/*
+==========================================
+Helpers
+==========================================
+*/
 
 function addMessage(text, type) {
 
@@ -35,55 +82,370 @@ function addMessage(text, type) {
 
 }
 
-function clearChat() {
+function clearMessages() {
 
     messages.innerHTML = "";
 
-    typing.textContent = "";
+}
+
+function setStatus(text) {
+
+    status.textContent = text;
+
+}/*
+==========================================
+Camera + Microphone
+==========================================
+*/
+
+async function startMedia() {
+
+    try {
+
+        localStream = await navigator.mediaDevices.getUserMedia({
+
+            video: true,
+
+            audio: true
+
+        });
+
+        if (localVideo) {
+
+            localVideo.srcObject = localStream;
+
+        }
+
+    } catch (err) {
+
+        console.error(err);
+
+        alert("Camera or microphone permission denied.");
+
+    }
 
 }
 
-function startSearching() {
+/*
+==========================================
+Peer Connection
+==========================================
+*/
+
+function createPeer() {
+
+    peer = new RTCPeerConnection(rtcConfig);
+
+    localStream.getTracks().forEach(track => {
+
+        peer.addTrack(track, localStream);
+
+    });
+
+    peer.ontrack = (event) => {
+
+        if (remoteVideo) {
+
+            remoteVideo.srcObject = event.streams[0];
+
+        }
+
+    };
+
+    peer.onicecandidate = (event) => {
+
+        if (event.candidate) {
+
+            socket.emit(
+                "iceCandidate",
+                event.candidate
+            );
+
+        }
+
+    };
+
+    peer.onconnectionstatechange = () => {
+
+        console.log(
+            "Peer:",
+            peer.connectionState
+        );
+
+        if (
+
+            peer.connectionState === "failed" ||
+
+            peer.connectionState === "closed" ||
+
+            peer.connectionState === "disconnected"
+
+        ) {
+
+            endPeer();
+
+        }
+
+    };
+
+}
+
+/*
+==========================================
+Offer
+==========================================
+*/
+
+async function createOffer() {
+
+    const offer = await peer.createOffer();
+
+    await peer.setLocalDescription(offer);
+
+    socket.emit(
+        "offer",
+        offer
+    );
+
+}
+
+/*
+==========================================
+Answer
+==========================================
+*/
+
+async function createAnswer(offer) {
+
+    await peer.setRemoteDescription(
+
+        new RTCSessionDescription(offer)
+
+    );
+
+    const answer = await peer.createAnswer();
+
+    await peer.setLocalDescription(answer);
+
+    socket.emit(
+        "answer",
+        answer
+    );
+
+}
+
+/*
+==========================================
+Cleanup
+==========================================
+*/
+
+function endPeer() {
+
+    if (peer) {
+
+        peer.close();
+
+        peer = null;
+
+    }
+
+    if (remoteVideo) {
+
+        remoteVideo.srcObject = null;
+
+    }
+
+}/*
+==========================================
+Socket Events
+==========================================
+*/
+
+socket.on("matched", async () => {
+
+    connected = true;
+
+    clearMessages();
+
+    typing.textContent = "";
+
+    setStatus("Connected");
+
+    try {
+
+        if (!localStream) {
+
+            await startMedia();
+
+        }
+
+        createPeer();
+
+        await createOffer();
+
+    } catch (err) {
+
+        console.error(err);
+
+    }
+
+});
+
+socket.on("waiting", () => {
+
+    connected = false;
+
+    setStatus("Looking for a stranger...");
+
+});
+
+socket.on("offer", async (offer) => {
+
+    try {
+
+        if (!localStream) {
+
+            await startMedia();
+
+        }
+
+        if (!peer) {
+
+            createPeer();
+
+        }
+
+        await createAnswer(offer);
+
+    } catch (err) {
+
+        console.error(err);
+
+    }
+
+});
+
+socket.on("answer", async (answer) => {
+
+    try {
+
+        await peer.setRemoteDescription(
+
+            new RTCSessionDescription(answer)
+
+        );
+
+    } catch (err) {
+
+        console.error(err);
+
+    }
+
+});
+
+socket.on("iceCandidate", async (candidate) => {
+
+    try {
+
+        if (peer) {
+
+            await peer.addIceCandidate(
+
+                new RTCIceCandidate(candidate)
+
+            );
+
+        }
+
+    } catch (err) {
+
+        console.error(err);
+
+    }
+
+});
+
+socket.on("message", (data) => {
+
+    const message =
+        typeof data === "string"
+            ? data
+            : data.message;
+
+    addMessage(message, "stranger");
+
+});
+
+socket.on("typing", () => {
+
+    typing.textContent = "Stranger is typing...";
+
+});
+
+socket.on("stopTyping", () => {
+
+    typing.textContent = "";
+
+});
+
+socket.on("partnerLeft", () => {
+
+    connected = false;
+
+    typing.textContent = "";
+
+    endPeer();
+
+    clearMessages();
+
+    setStatus("Stranger disconnected");
+
+});
+
+socket.on("onlineCount", (count) => {
+
+    onlineCount.textContent = "Online: " + count;
+
+});
+
+socket.on("pongServer", () => {
+
+    console.log("Ping OK");
+
+});/*
+==========================================
+Buttons
+==========================================
+*/
+
+startBtn.addEventListener("click", async () => {
 
     home.classList.add("hidden");
 
     chat.classList.remove("hidden");
 
-    clearChat();
+    setStatus("Connecting...");
 
-    connected = false;
+    try {
 
-    status.textContent = "Searching for a stranger...";
+        await startMedia();
+
+    } catch (err) {
+
+        console.error(err);
+
+    }
 
     socket.emit("findPartner");
 
-}
-
-function sendMessage() {
-
-    const text = input.value.trim();
-
-    if (!connected || text === "") return;
-
-    socket.emit("message", text);
-
-    addMessage(text, "me");
-
-    input.value = "";
-
-    socket.emit("stopTyping");
-
-}
-
-startBtn.addEventListener("click", startSearching);
+});
 
 sendBtn.addEventListener("click", sendMessage);
 
-input.addEventListener("keydown", function (e) {
+input.addEventListener("keydown", (e) => {
 
     if (e.key === "Enter") {
-
-        e.preventDefault();
 
         sendMessage();
 
@@ -91,7 +453,27 @@ input.addEventListener("keydown", function (e) {
 
 });
 
-input.addEventListener("input", function () {
+function sendMessage() {
+
+    const message = input.value.trim();
+
+    if (!message || !connected) return;
+
+    socket.emit("message", {
+
+        message
+
+    });
+
+    addMessage(message, "me");
+
+    input.value = "";
+
+    socket.emit("stopTyping");
+
+}
+
+input.addEventListener("input", () => {
 
     if (!connected) return;
 
@@ -107,130 +489,137 @@ input.addEventListener("input", function () {
 
 });
 
-nextBtn.addEventListener("click", function () {
+nextBtn.addEventListener("click", () => {
 
-    clearChat();
+    endPeer();
 
-    connected = false;
-
-    status.textContent = "Searching for a new stranger...";
-
-    socket.emit("next");
-
-});
-
-disconnectBtn.addEventListener("click", function () {
-
-    location.reload();
-
-});
-
-reportBtn.addEventListener("click", function () {
-
-    if (!connected) {
-
-        alert("You are not connected to anyone.");
-
-        return;
-
-    }
-
-    socket.emit("reportPartner");
-
-    alert("Thank you. This user has been reported.");
-
-});
-
-blockBtn.addEventListener("click", function () {
-
-    if (!connected) {
-
-        alert("You are not connected to anyone.");
-
-        return;
-
-    }
-
-    socket.emit("blockPartner");
-
-    connected = false;
-
-    clearChat();
-
-    status.textContent = "Blocked. Searching for another stranger...";
-
-    socket.emit("next");
-
-});
-
-socket.on("matched", function () {
-
-    connected = true;
-
-    status.textContent = "Connected to a stranger";
-
-});
-
-socket.on("waiting", function () {
-
-    connected = false;
-
-    status.textContent = "Waiting for a stranger...";
-
-});
-
-socket.on("message", function (data) {
-
-    if (typeof data === "string") {
-
-        addMessage(data, "stranger");
-
-    } else if (data && data.message) {
-
-        addMessage(data.message, "stranger");
-
-    }
-
-});
-
-socket.on("typing", function () {
-
-    typing.textContent = "Stranger is typing...";
-
-});
-
-socket.on("stopTyping", function () {
+    clearMessages();
 
     typing.textContent = "";
 
+    setStatus("Searching for stranger...");
+
+    socket.emit("next");
+
 });
 
-socket.on("partnerLeft", function () {
+disconnectBtn.addEventListener("click", () => {
+
+    endPeer();
+
+    clearMessages();
+
+    socket.emit("disconnectChat");
 
     connected = false;
 
-    clearChat();
-
-    status.textContent = "Stranger disconnected. Searching again...";
+    setStatus("Disconnected");
 
 });
 
-socket.on("onlineCount", function (count) {
+reportBtn.addEventListener("click", () => {
 
-    onlineCount.textContent = "Online: " + count;
+    socket.emit(
+        "reportPartner",
+        {
+            reason: "User reported"
+        }
+    );
+
+    alert("User reported.");
 
 });
 
-socket.on("connect", function () {
 
-    console.log("Connected:", socket.id);
+blockBtn.addEventListener("click", () => {
+
+    socket.emit("blockPartner");
+
+    endPeer();
+
+    clearMessages();
+
+    setStatus("User blocked.");
 
 });
 
-socket.on("disconnect", function () {
+/*
+==========================================
+Keep Alive
+==========================================
+*/
 
-    connected = false;
+setInterval(() => {
 
-    status.textContent = "Disconnected from server.";
+    socket.emit("pingServer");
+
+}, 30000);
+
+/*
+==========================================
+Window Close
+==========================================
+*/
+
+window.addEventListener("beforeunload", () => {
+
+    endPeer();
+
+});
+
+/*
+==========================================
+End
+==========================================
+*//*
+==========================================
+Camera Toggle
+==========================================
+*/
+
+let cameraEnabled = true;
+
+cameraBtn.addEventListener("click", () => {
+
+    if (!localStream) return;
+
+    const videoTrack = localStream.getVideoTracks()[0];
+
+    if (!videoTrack) return;
+
+    cameraEnabled = !cameraEnabled;
+
+    videoTrack.enabled = cameraEnabled;
+
+    cameraBtn.textContent = cameraEnabled
+        ? "📷 Camera"
+        : "📷 Camera Off";
+
+});
+
+
+/*
+==========================================
+Microphone Toggle
+==========================================
+*/
+
+let microphoneEnabled = true;
+
+muteBtn.addEventListener("click", () => {
+
+    if (!localStream) return;
+
+    const audioTrack = localStream.getAudioTracks()[0];
+
+    if (!audioTrack) return;
+
+    microphoneEnabled = !microphoneEnabled;
+
+    audioTrack.enabled = microphoneEnabled;
+
+    muteBtn.textContent = microphoneEnabled
+        ? "🎤 Microphone"
+        : "🔇 Muted";
 
 });
