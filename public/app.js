@@ -262,7 +262,7 @@ Socket Events
 ==========================================
 */
 
-socket.on("matched", async () => {
+socket.on("matched", async ({ initiator }) => {
 
     connected = true;
 
@@ -275,14 +275,14 @@ socket.on("matched", async () => {
     try {
 
         if (!localStream) {
-
             await startMedia();
-
         }
 
         createPeer();
 
-        await createOffer();
+        if (initiator) {
+            await createOffer();
+        }
 
     } catch (err) {
 
@@ -305,18 +305,26 @@ socket.on("offer", async (offer) => {
     try {
 
         if (!localStream) {
-
             await startMedia();
-
         }
 
         if (!peer) {
-
             createPeer();
-
         }
 
-        await createAnswer(offer);
+        if (peer.signalingState !== "stable") {
+            return;
+        }
+
+        await peer.setRemoteDescription(
+            new RTCSessionDescription(offer)
+        );
+
+        const answer = await peer.createAnswer();
+
+        await peer.setLocalDescription(answer);
+
+        socket.emit("answer", answer);
 
     } catch (err) {
 

@@ -202,25 +202,22 @@ module.exports = function (io) {
 
                 if (partner) {
 
+    matchMaker.setPartner(
+        socket.id,
+        partner
+    );
 
-                    matchMaker.setPartner(
-                        socket.id,
-                        partner
-                    );
+    // The user who just searched becomes the caller
+    socket.emit("matched", {
+        initiator: true
+    });
 
+    // The waiting user becomes the receiver
+    io.to(partner).emit("matched", {
+        initiator: false
+    });
 
-                    socket.emit(
-                        "matched"
-                    );
-
-
-                    io.to(partner)
-                        .emit(
-                            "matched"
-                        );
-
-
-                }
+}
 
                 else {
 
