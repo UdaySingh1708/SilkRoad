@@ -24,6 +24,8 @@ const { Server } = require("socket.io");
 
 const socketHandler = require("./socket/socketHandler");
 const adminPanel = require("./dashboard/panel");
+
+
 /*
 ======================================================
 Express
@@ -33,6 +35,7 @@ Express
 const app = express();
 
 const server = http.createServer(app);
+
 
 /*
 ======================================================
@@ -51,22 +54,18 @@ const io = new Server(server, {
     },
 
     transports: [
-
         "websocket",
-
         "polling"
-
     ],
 
     pingTimeout:
-
         Number(process.env.PING_TIMEOUT) || 20000,
 
     pingInterval:
-
         Number(process.env.PING_INTERVAL) || 25000
 
 });
+
 
 /*
 ======================================================
@@ -86,9 +85,11 @@ app.use(
 
 );
 
+
 app.use(compression());
 
 app.use(cors());
+
 
 /*
 ======================================================
@@ -108,7 +109,9 @@ const limiter = rateLimit({
 
 });
 
+
 app.use(limiter);
+
 
 /*
 ======================================================
@@ -117,6 +120,7 @@ Parsers
 */
 
 app.use(express.json());
+
 
 app.use(
 
@@ -127,6 +131,7 @@ app.use(
     })
 
 );
+
 
 /*
 ======================================================
@@ -142,15 +147,69 @@ app.use(
 
     )
 
-);/*
+);
+
+
+/*
 ======================================================
-MongoDB
+SEO Files
 ======================================================
 */
+
+app.get("/robots.txt", (req, res) => {
+
+    res.type("text/plain");
+
+    res.send(
+`User-agent: *
+Allow: /
+
+Sitemap: https://silkroadchat.onrender.com/sitemap.xml`
+    );
+
+});
+
+
+app.get("/sitemap.xml", (req, res) => {
+
+    res.type("application/xml");
+
+    res.send(
+`<?xml version="1.0" encoding="UTF-8"?>
+
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+
+<url>
+<loc>https://silkroadchat.onrender.com/</loc>
+<lastmod>2026-07-13</lastmod>
+<changefreq>daily</changefreq>
+<priority>1.0</priority>
+</url>
+
+</urlset>`
+    );
+
+});
+
+
+/*
+======================================================
+Admin Panel
+======================================================
+*/
+
 app.use(
     "/admin",
     adminPanel
 );
+
+
+/*
+======================================================
+MongoDB
+======================================================
+*/
+
 async function connectDatabase() {
 
     try {
@@ -162,6 +221,7 @@ async function connectDatabase() {
             return;
 
         }
+
 
         await mongoose.connect(
 
@@ -177,7 +237,9 @@ async function connectDatabase() {
 
         );
 
+
         console.log("MongoDB Connected");
+
 
     }
 
@@ -193,7 +255,10 @@ async function connectDatabase() {
 
 }
 
+
 connectDatabase();
+
+
 
 /*
 ======================================================
@@ -202,6 +267,8 @@ Socket Handler
 */
 
 socketHandler(io);
+
+
 
 /*
 ======================================================
@@ -233,6 +300,8 @@ app.get("/health", (req, res) => {
 
 });
 
+
+
 /*
 ======================================================
 Home
@@ -257,6 +326,8 @@ app.get("/", (req, res) => {
 
 });
 
+
+
 /*
 ======================================================
 404
@@ -273,7 +344,11 @@ app.use((req, res) => {
 
     });
 
-});/*
+});
+
+
+
+/*
 ======================================================
 Error Handler
 ======================================================
@@ -285,6 +360,7 @@ app.use((err, req, res, next) => {
 
     console.error(err);
 
+
     res.status(500).json({
 
         success: false,
@@ -294,6 +370,8 @@ app.use((err, req, res, next) => {
     });
 
 });
+
+
 
 /*
 ======================================================
@@ -307,6 +385,8 @@ const PORT =
 
     3000;
 
+
+
 /*
 ======================================================
 Start Server
@@ -314,6 +394,7 @@ Start Server
 */
 
 server.listen(PORT, () => {
+
 
     console.log("");
 
@@ -353,6 +434,8 @@ server.listen(PORT, () => {
 
 });
 
+
+
 /*
 ======================================================
 Socket.IO Errors
@@ -369,7 +452,11 @@ io.engine.on("connection_error", (err) => {
 
     console.error(err.message);
 
-});/*
+});
+
+
+
+/*
 ======================================================
 Graceful Shutdown
 ======================================================
@@ -377,11 +464,15 @@ Graceful Shutdown
 
 let shuttingDown = false;
 
+
 async function shutdown(signal) {
+
 
     if (shuttingDown) return;
 
+
     shuttingDown = true;
+
 
     console.log("");
 
@@ -393,7 +484,9 @@ async function shutdown(signal) {
 
     console.log("====================================");
 
+
     try {
+
 
         server.close(() => {
 
@@ -401,37 +494,45 @@ async function shutdown(signal) {
 
         });
 
+
+
         if (mongoose.connection.readyState === 1) {
+
 
             await mongoose.connection.close();
 
+
             console.log("MongoDB Connection Closed");
+
 
         }
 
+
         console.log("Shutdown Complete");
 
+
         process.exit(0);
+
+
 
     }
 
     catch (err) {
 
+
         console.error("Shutdown Error:");
 
         console.error(err);
 
+
         process.exit(1);
+
 
     }
 
 }
 
-/*
-======================================================
-Process Events
-======================================================
-*/
+
 
 process.on("SIGINT", () => {
 
@@ -439,33 +540,30 @@ process.on("SIGINT", () => {
 
 });
 
+
 process.on("SIGTERM", () => {
 
     shutdown("SIGTERM");
 
 });
 
+
 process.on("unhandledRejection", (reason) => {
-
-    console.error("");
-
-    console.error("Unhandled Promise Rejection");
 
     console.error(reason);
 
 });
 
+
 process.on("uncaughtException", (err) => {
-
-    console.error("");
-
-    console.error("Uncaught Exception");
 
     console.error(err);
 
     shutdown("uncaughtException");
 
 });
+
+
 
 /*
 ======================================================
@@ -488,9 +586,3 @@ app.get("/ping", (req, res) => {
     });
 
 });
-
-/*
-======================================================
-End
-======================================================
-*/
