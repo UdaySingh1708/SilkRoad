@@ -111,6 +111,7 @@ video{
     height:360px;
     background:black;
     object-fit:cover;
+     transform: scaleX(-1) !important;
 }
 
 .mediaControls{

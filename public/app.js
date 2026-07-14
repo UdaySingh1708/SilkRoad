@@ -134,12 +134,19 @@ async function startMedia(){
 
 
         localStream = await navigator.mediaDevices.getUserMedia({
+    video: {
+        facingMode: "user",
+        width: { ideal: 1280 },
+        height: { ideal: 720 }
+    },
+    audio: true
+});
 
-            video:true,
+localVideo.srcObject = localStream;
 
-            audio:true
-
-        });
+// Force no CSS transform
+localVideo.style.transform = "none";
+remoteVideo.style.transform = "none";
 
 
 
