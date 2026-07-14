@@ -6,180 +6,129 @@ const Report = require("../models/Report");
 
 const matchMaker = require("./matchMaker");
 
-
 module.exports = function (io) {
-
 
     const messageCooldown = new Map();
 
-
-
     io.on("connection", async (socket) => {
 
-
-
-        let userId =
-            socket.handshake.auth.userId;
-
-
+        let userId = socket.handshake.auth.userId;
 
         if (!userId) {
-
             userId =
                 "user_" +
                 Math.random()
-                .toString(36)
-                .substring(2,15);
-
+                    .toString(36)
+                    .substring(2, 15);
         }
-
-
 
         socket.userId = userId;
 
+        socket.preferences = {
+            language: "Any",
+            mode: "Video",
+            interest: "Any"
+        };
 
+        try {
+            await User.findOneAndUpdate(
+                { userId },
+                { userId },
+                { upsert: true, new: true }
+            );
+        } catch (err) {
+            console.error("User save error:", err.message);
+        }
+
+        console.log("User connected:", socket.id, socket.userId);
 
         try {
 
-
-            await User.findOneAndUpdate(
-
-                {
-                    userId
-                },
-
-                {
-                    userId
-                },
-
-                {
-                    upsert:true
-                }
-
-            );
-
-
-        }
-
-        catch(err) {
-
-            console.error(
-                "User save error:",
-                err.message
-            );
-
-        }
-
-
-
-        console.log(
-            "User connected:",
-            socket.id,
-            socket.userId
-        );
-
-
-
-        const bannedUser =
-            await Ban.findOne({
-
-                userId:
-                socket.userId
-
+            const bannedUser = await Ban.findOne({
+                userId: socket.userId
             });
 
+            if (bannedUser) {
+                socket.emit("banned", {
+                    reason: bannedUser.reason
+                });
 
+                socket.disconnect(true);
+                return;
+            }
 
-        if (bannedUser) {
-
-
-            socket.emit(
-                "banned",
-                {
-
-                    reason:
-                    bannedUser.reason
-
-                }
-            );
-
-
-            socket.disconnect(true);
-
-
-            return;
-
+        } catch (err) {
+            console.error("Ban check error:", err.message);
         }
 
-
-
-        io.emit(
-            "onlineCount",
-            io.engine.clientsCount
-        );
-
-
-
+        io.emit("onlineCount", io.engine.clientsCount);
 
         function cleanText(text) {
 
-
-            if (
-                typeof text !== "string"
-            ) {
-
+            if (typeof text !== "string") {
                 return "";
-
             }
 
-
             return text
-                .replace(/[<>]/g,"")
+                .replace(/[<>]/g, "")
+                .replace(/\s+/g, " ")
                 .trim()
-                .replace(/\s+/g," ")
-                .substring(0,500);
-
-
+                .substring(0, 500);
         }
-
-
 
         function canSendMessage() {
 
-
-            const now =
-                Date.now();
-
+            const now = Date.now();
 
             const last =
-                messageCooldown.get(
-                    socket.id
-                )
-                || 0;
+                messageCooldown.get(socket.id) || 0;
 
-
-
-            if (
-                now - last < 800
-            ) {
-
+            if (now - last < 800) {
                 return false;
-
             }
 
-
-
-            messageCooldown.set(
-                socket.id,
-                now
-            );
-
+            messageCooldown.set(socket.id, now);
 
             return true;
+        };
 
-        }
+        /*
+        =====================================
+        User Preferences
+        =====================================
+        */
 
+        socket.on("setPreferences", (data) => {
 
+            if (!data || typeof data !== "object") {
+                return;
+            }
+
+            socket.preferences = {
+
+                language:
+                    typeof data.language === "string"
+                        ? data.language.substring(0, 30)
+                        : "Any",
+
+                mode:
+                    typeof data.mode === "string"
+                        ? data.mode.substring(0, 30)
+                        : "Video",
+
+                interest:
+                    typeof data.interest === "string"
+                        ? data.interest.substring(0, 30)
+                        : "Any"
+            };
+
+            console.log(
+                "Preferences:",
+                socket.userId,
+                socket.preferences
+            );
+
+        });
 
         /*
         =====================================
@@ -187,58 +136,38 @@ module.exports = function (io) {
         =====================================
         */
 
+        socket.on("findPartner", () => {
 
-        socket.on(
-            "findPartner",
-            () => {
+            matchMaker.remove(socket.id);
 
+            const partner = matchMaker.find(
+                socket.id,
+                io.sockets.sockets
+            );
 
-                const partner =
-                    matchMaker.find(
-                        socket.id
-                    );
+            if (partner) {
 
+                matchMaker.setPartner(
+                    socket.id,
+                    partner
+                );
 
+                socket.emit("matched", {
+                    initiator: true
+                });
 
-                if (partner) {
+                io.to(partner).emit("matched", {
+                    initiator: false
+                });
 
-    matchMaker.setPartner(
-        socket.id,
-        partner
-    );
-
-    // The user who just searched becomes the caller
-    socket.emit("matched", {
-        initiator: true
-    });
-
-    // The waiting user becomes the receiver
-    io.to(partner).emit("matched", {
-        initiator: false
-    });
-
-}
-
-                else {
-
-
-                    matchMaker.wait(
-                        socket.id
-                    );
-
-
-                    socket.emit(
-                        "waiting"
-                    );
-
-
-                }
-
-
+                return;
             }
-        );
 
+            matchMaker.wait(socket.id);
 
+            socket.emit("waiting");
+
+        });
 
         /*
         =====================================
@@ -246,216 +175,186 @@ module.exports = function (io) {
         =====================================
         */
 
+        socket.on("next", () => {
 
-        socket.on(
-            "next",
-            () => {
+            const partner = matchMaker.remove(socket.id);
 
+            if (partner) {
 
-                const partner =
-                    matchMaker.remove(
-                        socket.id
+                const partnerSocket =
+                    io.sockets.sockets.get(partner);
+
+                if (partnerSocket) {
+
+                    matchMaker.wait(partner);
+
+                    io.to(partner).emit("partnerLeft");
+                    io.to(partner).emit("waiting");
+
+                    const newPartner = matchMaker.find(
+                        partner,
+                        io.sockets.sockets
                     );
 
+                    if (newPartner) {
 
-                if (partner) {
-
-
-                    io.to(partner)
-                        .emit(
-                            "partnerLeft"
+                        matchMaker.setPartner(
+                            partner,
+                            newPartner
                         );
 
+                        io.to(partner).emit("matched", {
+                            initiator: true
+                        });
 
+                        io.to(newPartner).emit("matched", {
+                            initiator: false
+                        });
+
+                    }
                 }
+            }
 
+            matchMaker.wait(socket.id);
 
+            socket.emit("waiting");
 
-                matchMaker.wait(
-                    socket.id
+            const myPartner = matchMaker.find(
+                socket.id,
+                io.sockets.sockets
+            );
+
+            if (myPartner) {
+
+                matchMaker.setPartner(
+                    socket.id,
+                    myPartner
                 );
 
+                socket.emit("matched", {
+                    initiator: true
+                });
 
-                socket.emit(
-                    "waiting"
-                );
-
+                io.to(myPartner).emit("matched", {
+                    initiator: false
+                });
 
             }
-        );
 
-
-
-        /*
+        });        /*
         =====================================
         Messages
         =====================================
         */
 
+        socket.on("message", (data) => {
 
-        socket.on(
-            "message",
-            (data) => {
-
-
-                if (
-                    !canSendMessage()
-                ) {
-
-
-                    socket.emit(
-                        "errorMessage",
-                        "Slow down"
-                    );
-
-
-                    return;
-
-
-                }
-
-
-
-                const partner =
-                    matchMaker.getPartner(
-                        socket.id
-                    );
-
-
-
-                if (!partner) return;
-
-
-
-                let message = "";
-
-
-
-                if (
-                    typeof data === "string"
-                ) {
-
-                    message = data;
-
-                }
-
-                else if (
-                    data &&
-                    typeof data === "object"
-                ) {
-
-                    message =
-                        data.message || "";
-
-                }
-
-
-
-                message =
-                    cleanText(
-                        message
-                    );
-
-
-
-                if (!message) return;
-
-
-
-                io.to(partner)
-                    .emit(
-                        "message",
-                        {
-                            message
-                        }
-                    );
-
-
+            if (!canSendMessage()) {
+                socket.emit("errorMessage", "Slow down");
+                return;
             }
-        );        /*
+
+            const partner = matchMaker.getPartner(socket.id);
+
+            if (!partner) {
+                return;
+            }
+
+            let message = "";
+
+            if (typeof data === "string") {
+                message = data;
+            } else if (
+                data &&
+                typeof data === "object" &&
+                typeof data.message === "string"
+            ) {
+                message = data.message;
+            }
+
+            message = cleanText(message);
+
+            if (!message.length) {
+                return;
+            }
+
+            io.to(partner).emit("message", {
+                message
+            });
+
+        });
+
+        /*
         =====================================
-        WebRTC
+        WebRTC Signaling
         =====================================
         */
 
+        socket.on("offer", (offer) => {
 
-        socket.on(
-            "offer",
-            (offer) => {
+            const partner = matchMaker.getPartner(socket.id);
 
-
-                const partner =
-                    matchMaker.getPartner(
-                        socket.id
-                    );
-
-
-                if (!partner) return;
-
-
-                io.to(partner)
-                    .emit(
-                        "offer",
-                        offer
-                    );
-
-
+            if (!partner) {
+                return;
             }
-        );
 
+            io.to(partner).emit("offer", offer);
 
+        });
 
-        socket.on(
-            "answer",
-            (answer) => {
+        socket.on("answer", (answer) => {
 
+            const partner = matchMaker.getPartner(socket.id);
 
-                const partner =
-                    matchMaker.getPartner(
-                        socket.id
-                    );
-
-
-                if (!partner) return;
-
-
-                io.to(partner)
-                    .emit(
-                        "answer",
-                        answer
-                    );
-
-
+            if (!partner) {
+                return;
             }
-        );
 
+            io.to(partner).emit("answer", answer);
 
+        });
 
-        socket.on(
-            "iceCandidate",
-            (candidate) => {
+        socket.on("iceCandidate", (candidate) => {
 
+            const partner = matchMaker.getPartner(socket.id);
 
-                const partner =
-                    matchMaker.getPartner(
-                        socket.id
-                    );
-
-
-                if (!partner) return;
-
-
-                io.to(partner)
-                    .emit(
-                        "iceCandidate",
-                        candidate
-                    );
-
-
+            if (!partner) {
+                return;
             }
-        );
 
+            io.to(partner).emit("iceCandidate", candidate);
 
+        });
+
+        /*
+        =====================================
+        Typing Indicator
+        =====================================
+        */
+
+        socket.on("typing", () => {
+
+            const partner = matchMaker.getPartner(socket.id);
+
+            if (!partner) {
+                return;
+            }
+
+            io.to(partner).emit("typing");
+
+        });
+
+        socket.on("stopTyping", () => {
+
+            const partner = matchMaker.getPartner(socket.id);
+
+            if (!partner) {
+                return;
+            }
+
+            io.to(partner).emit("stopTyping");
+
+        });
 
         /*
         =====================================
@@ -463,279 +362,154 @@ module.exports = function (io) {
         =====================================
         */
 
+        socket.on("reportPartner", async (data) => {
 
-        socket.on(
-            "reportPartner",
-            async (data) => {
+            const partner = matchMaker.getPartner(socket.id);
 
+            if (!partner) {
+                return;
+            }
 
-                const partner =
-                    matchMaker.getPartner(
-                        socket.id
-                    );
+            const partnerSocket =
+                io.sockets.sockets.get(partner);
 
+            if (!partnerSocket) {
+                return;
+            }
 
-                if (!partner) return;
+            let reason = "Unknown";
 
+            if (
+                data &&
+                typeof data === "object" &&
+                typeof data.reason === "string"
+            ) {
+                reason = data.reason
+                    .trim()
+                    .substring(0, 100);
+            }
 
+            try {
 
-                const reportedSocket =
-                    io.sockets.sockets.get(
-                        partner
-                    );
+                await Report.create({
 
+                    reporter: socket.userId,
 
+                    reportedUser: partnerSocket.userId,
 
-                if (!reportedSocket)
-                    return;
+                    reason
 
+                });
 
+                socket.emit("reportSubmitted");
 
-                let reason =
-                    "Unknown";
+                console.log(
+                    "Report:",
+                    socket.userId,
+                    "->",
+                    partnerSocket.userId
+                );
 
+            } catch (err) {
 
-
-                if (
-                    data &&
-                    typeof data === "object" &&
-                    typeof data.reason === "string"
-                ) {
-
-
-                    reason =
-                        data.reason
-                        .trim()
-                        .substring(0,100);
-
-
-                }
-
-
-
-                try {
-
-
-                    await Report.create({
-
-                        reporter:
-                            socket.userId,
-
-
-                        reportedUser:
-                            reportedSocket.userId,
-
-
-                        reason
-
-
-                    });
-
-
-
-                    console.log(
-                        "Report saved:",
-                        socket.userId,
-                        reportedSocket.userId
-                    );
-
-
-                    socket.emit(
-                        "reportSubmitted"
-                    );
-
-
-                }
-
-                catch(err) {
-
-
-                    console.error(
-                        "Report error:",
-                        err.message
-                    );
-
-
-                }
-
+                console.error(
+                    "Report error:",
+                    err.message
+                );
 
             }
-        );
 
-
+        });
 
         /*
         =====================================
-        Block User
+        Block Partner
         =====================================
         */
 
+        socket.on("blockPartner", () => {
 
-        socket.on(
-            "blockPartner",
-            () => {
+            const partner = matchMaker.getPartner(socket.id);
 
-
-                const partner =
-                    matchMaker.getPartner(
-                        socket.id
-                    );
-
-
-                if (!partner) return;
-
-
-
-                matchMaker.block(
-                    socket.id,
-                    partner
-                );
-
-
-                matchMaker.remove(
-                    socket.id
-                );
-
-
-                io.to(partner)
-                    .emit(
-                        "partnerLeft"
-                    );
-
-
-                socket.emit(
-                    "partnerLeft"
-                );
-
-
-                matchMaker.wait(
-                    socket.id
-                );
-
-
-                socket.emit(
-                    "waiting"
-                );
-
-
+            if (!partner) {
+                return;
             }
-        );
 
+            matchMaker.block(socket.id, partner);
 
+            matchMaker.remove(socket.id);
 
-        /*
-        =====================================
-        Typing
-        =====================================
-        */
+            io.to(partner).emit("partnerLeft");
 
+            socket.emit("partnerLeft");
 
-        socket.on(
-            "typing",
-            () => {
+            matchMaker.wait(socket.id);
 
+            socket.emit("waiting");
 
-                const partner =
-                    matchMaker.getPartner(
-                        socket.id
-                    );
-
-
-                if (!partner) return;
-
-
-                io.to(partner)
-                    .emit(
-                        "typing"
-                    );
-
-
-            }
-        );
-
-
-
-        socket.on(
-            "stopTyping",
-            () => {
-
-
-                const partner =
-                    matchMaker.getPartner(
-                        socket.id
-                    );
-
-
-                if (!partner) return;
-
-
-                io.to(partner)
-                    .emit(
-                        "stopTyping"
-                    );
-
-
-            }
-        );
-
-
-
-        /*
+        });        /*
         =====================================
         Disconnect
         =====================================
         */
 
+        socket.on("disconnect", () => {
 
-        socket.on(
-            "disconnect",
-            () => {
+            messageCooldown.delete(socket.id);
 
+            const partner = matchMaker.remove(socket.id);
 
-                messageCooldown.delete(
-                    socket.id
-                );
+            if (partner) {
 
+                const partnerSocket =
+                    io.sockets.sockets.get(partner);
 
+                if (partnerSocket) {
 
-                const partner =
-                    matchMaker.remove(
-                        socket.id
+                    io.to(partner).emit("partnerLeft");
+
+                    matchMaker.wait(partner);
+
+                    io.to(partner).emit("waiting");
+
+                    const newPartner = matchMaker.find(
+                        partner,
+                        io.sockets.sockets
                     );
 
+                    if (newPartner) {
 
-
-                if (partner) {
-
-
-                    io.to(partner)
-                        .emit(
-                            "partnerLeft"
+                        matchMaker.setPartner(
+                            partner,
+                            newPartner
                         );
 
+                        io.to(partner).emit("matched", {
+                            initiator: true
+                        });
+
+                        io.to(newPartner).emit("matched", {
+                            initiator: false
+                        });
+
+                    }
 
                 }
 
-
-
-                io.emit(
-                    "onlineCount",
-                    io.engine.clientsCount
-                );
-
-
-                console.log(
-                    "Disconnected:",
-                    socket.userId
-                );
-
-
             }
-        );
 
+            io.emit(
+                "onlineCount",
+                io.engine.clientsCount
+            );
 
+            console.log(
+                "Disconnected:",
+                socket.userId
+            );
+
+        });
 
     });
-
 
 };

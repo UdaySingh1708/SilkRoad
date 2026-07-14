@@ -2,106 +2,172 @@
 
 /*
 ==========================================
-Silk Road Match Maker
-Professional Version
+Silk Road Smart Match Maker
 ==========================================
 */
 
 const waitingQueue = [];
-
 const partners = new Map();
-
 const blockedUsers = new Map();
 
 /*
-------------------------------------------
-Block System
-------------------------------------------
+==========================================
+Blocked Users
+==========================================
 */
 
-function isBlocked(userA, userB) {
+function isBlocked(a, b) {
 
-    const listA = blockedUsers.get(userA);
+    const listA = blockedUsers.get(a);
+    if (listA && listA.has(b)) return true;
 
-    if (listA && listA.has(userB)) {
-        return true;
-    }
-
-    const listB = blockedUsers.get(userB);
-
-    if (listB && listB.has(userA)) {
-        return true;
-    }
+    const listB = blockedUsers.get(b);
+    if (listB && listB.has(a)) return true;
 
     return false;
 
 }
 
 /*
-------------------------------------------
+==========================================
+Preference Score
+==========================================
+*/
+
+function getScore(userA, userB) {
+
+    let score = 0;
+
+    if (!userA || !userB) return 0;
+
+    if (
+        userA.preferences.language === userB.preferences.language ||
+        userA.preferences.language === "Any" ||
+        userB.preferences.language === "Any"
+    ) {
+        score += 3;
+    }
+
+    if (
+        userA.preferences.mode === userB.preferences.mode ||
+        userA.preferences.mode === "Any" ||
+        userB.preferences.mode === "Any"
+    ) {
+        score += 2;
+    }
+
+    if (
+        userA.preferences.interest === userB.preferences.interest ||
+        userA.preferences.interest === "Any" ||
+        userB.preferences.interest === "Any"
+    ) {
+        score += 2;
+    }
+
+    return score;
+
+}
+
+/*
+==========================================
 Exports
-------------------------------------------
+==========================================
 */
 
 module.exports = {
 
-    find(id) {
+    find(id, sockets) {
 
-        for (let i = 0; i < waitingQueue.length; i++) {
+        let best = null;
+        let bestScore = -1;
+
+        const me = sockets.get(id);
+
+        for (let i = waitingQueue.length - 1; i >= 0; i--) {
 
             const stranger = waitingQueue[i];
 
-            if (stranger === id) {
+            if (!sockets.has(stranger)) {
+
+                waitingQueue.splice(i, 1);
                 continue;
+
             }
 
-            if (isBlocked(id, stranger)) {
-                continue;
+            if (stranger === id) continue;
+
+            if (partners.has(stranger)) continue;
+
+            if (isBlocked(id, stranger)) continue;
+
+            const other = sockets.get(stranger);
+
+            const score = getScore(me, other);
+
+            if (score > bestScore) {
+
+                bestScore = score;
+                best = stranger;
+
             }
-
-            waitingQueue.splice(i, 1);
-
-            return stranger;
 
         }
 
-        return null;
+        if (!best && waitingQueue.length > 0) {
+
+            for (let i = waitingQueue.length - 1; i >= 0; i--) {
+
+                const stranger = waitingQueue[i];
+
+                if (stranger === id) continue;
+
+                if (!sockets.has(stranger)) {
+
+                    waitingQueue.splice(i, 1);
+                    continue;
+
+                }
+
+                if (partners.has(stranger)) continue;
+
+                if (isBlocked(id, stranger)) continue;
+
+                best = stranger;
+                break;
+
+            }
+
+        }
+
+        if (best) {
+
+            const index = waitingQueue.indexOf(best);
+
+            if (index !== -1) {
+
+                waitingQueue.splice(index, 1);
+
+            }
+
+        }
+
+        return best;
 
     },
 
     wait(id) {
 
-        if (!waitingQueue.includes(id)) {
+        if (partners.has(id)) return;
 
-            waitingQueue.push(id);
+        const index = waitingQueue.indexOf(id);
 
-        }
+        if (index !== -1) {
 
-    },
-
-    setPartner(user1, user2) {
-
-        partners.set(user1, user2);
-
-        partners.set(user2, user1);
-
-    },
-
-    getPartner(id) {
-
-        return partners.get(id);
-
-    },
-
-    block(user1, user2) {
-
-        if (!blockedUsers.has(user1)) {
-
-            blockedUsers.set(user1, new Set());
+            waitingQueue.splice(index, 1);
 
         }
 
-        blockedUsers.get(user1).add(user2);
+        waitingQueue.push(id);
 
     },
 
@@ -126,6 +192,31 @@ module.exports = {
         }
 
         return partner;
+
+    },
+
+    setPartner(a, b) {
+
+        partners.set(a, b);
+        partners.set(b, a);
+
+    },
+
+    getPartner(id) {
+
+        return partners.get(id);
+
+    },
+
+    block(a, b) {
+
+        if (!blockedUsers.has(a)) {
+
+            blockedUsers.set(a, new Set());
+
+        }
+
+        blockedUsers.get(a).add(b);
 
     }
 

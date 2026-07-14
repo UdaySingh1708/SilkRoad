@@ -71,18 +71,151 @@
 
     <section id="home" class="card">
 
-        <h2>Meet Random Strangers</h2>
+    <h2>Meet Random Strangers</h2>
+
+    <p>
+        Choose your preferences and connect with people worldwide.
+    </p>
+
+
+    <div class="preferences">
+
+
+        <label>
+            Language
+        </label>
+
+        <select id="languageSelect">
+
+            <option value="Any">
+                Any Language
+            </option>
+
+            <option value="English">
+                English
+            </option>
+
+            <option value="Hindi">
+                Hindi
+            </option>
+
+            <option value="Spanish">
+                Spanish
+            </option>
+
+        </select>
+
+
+
+        <label>
+            Chat Mode
+        </label>
+
+        <select id="modeSelect">
+
+            <option value="Any">
+                Any Mode
+            </option>
+
+            <option value="Video">
+                Video Chat
+            </option>
+
+            <option value="Voice">
+                Voice Chat
+            </option>
+
+            <option value="Text">
+                Text Chat
+            </option>
+
+        </select>
+
+
+
+        <label>
+            Interest
+        </label>
+
+        <select id="interestSelect">
+
+            <option value="Any">
+                Any Interest
+            </option>
+
+            <option value="Gaming">
+                Gaming
+            </option>
+
+            <option value="Music">
+                Music
+            </option>
+
+            <option value="Technology">
+                Technology
+            </option>
+
+            <option value="Movies">
+                Movies
+            </option>
+
+            <option value="General">
+                General Talk
+            </option>
+
+        </select>
+
+
+        </div>
+
+    <div id="selectedPreferences">
+        Selected: Any | Any | Any
+    </div>
+
+
+    <button id="startBtn">
+        Start Chat
+    </button>
+
+
+</section>
+
+
+<div id="ageModal" class="modal hidden">
+
+    <div class="modalBox">
+
+        <h2>Age Confirmation</h2>
 
         <p>
-            Instantly connect with people around the world using
-            secure anonymous video, voice and text chat.
+            You must be 14 years or older to use Silk Road.
+            By continuing, you agree to our Community Guidelines.
         </p>
 
-        <button id="startBtn">
-            Start Chat
+
+        <label>
+
+            <input 
+            type="checkbox" 
+            id="ageConfirm">
+
+            I confirm that I am 14 years or older.
+
+        </label>
+
+
+        <br><br>
+
+
+        <button id="continueBtn">
+            Continue
         </button>
 
-    </section>
+
+    </div>
+
+</div>
+
 
     <section id="chat" class="card hidden">
 
@@ -181,7 +314,7 @@
 
 </div>
 
-<<footer class="footer">
+<footer class="footer">
 
     <a href="/about.html">About Us</a> |
 
