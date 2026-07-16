@@ -58,19 +58,31 @@ let connected = false;
 
 
 const rtcConfig = {
-
-    iceServers:[
-
+    iceServers: [
         {
-            urls:"stun:stun.l.google.com:19302"
+            urls: "stun:stun.relay.metered.ca:80"
         },
-
         {
-            urls:"stun:stun1.l.google.com:19302"
+            urls: "turn:global.relay.metered.ca:80",
+            username: "78001c7ee6131328e3e4d9b8",
+            credential: "xLHzTJwh9GA7Emsw"
+        },
+        {
+            urls: "turn:global.relay.metered.ca:80?transport=tcp",
+            username: "78001c7ee6131328e3e4d9b8",
+            credential: "xLHzTJwh9GA7Emsw"
+        },
+        {
+            urls: "turn:global.relay.metered.ca:443",
+            username: "78001c7ee6131328e3e4d9b8",
+            credential: "xLHzTJwh9GA7Emsw"
+        },
+        {
+            urls: "turns:global.relay.metered.ca:443?transport=tcp",
+            username: "78001c7ee6131328e3e4d9b8",
+            credential: "xLHzTJwh9GA7Emsw"
         }
-
     ]
-
 };
 
 
