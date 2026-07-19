@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>My Profile - Silk Road</title>
+
+<style>
+
+body{
+
+    margin:0;
+    font-family:Arial,sans-serif;
+    background:#111;
+    color:white;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    height:100vh;
+
+}
+
+.card{
+
+    width:380px;
+    background:#222;
+    border-radius:15px;
+    padding:30px;
+    text-align:center;
+
+}
+
+img{
+
+    width:140px;
+    height:140px;
+    border-radius:50%;
+    object-fit:cover;
+    border:3px solid #4CAF50;
+
+}
+
+input{
+
+    width:100%;
+    padding:12px;
+    margin-top:15px;
+    border:none;
+    border-radius:8px;
+    box-sizing:border-box;
+
+}
+
+button{
+
+    width:100%;
+    padding:12px;
+    margin-top:15px;
+    border:none;
+    border-radius:8px;
+    cursor:pointer;
+    background:#4CAF50;
+    color:white;
+    font-size:16px;
+
+}
+
+.back{
+
+    background:#555;
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="card">
+
+<h2>My Profile</h2>
+
+<img
+id="preview"
+src="">
+
+<input
+type="file"
+id="photo"
+accept="image/*">
+
+<input
+type="text"
+id="name"
+placeholder="Your name">
+
+<button
+id="saveBtn">
+
+Save Changes
+
+</button>
+
+<button
+class="back"
+onclick="location.href='/'">
+
+Back
+
+</button>
+
+</div>
+
+<script>
+
+const preview =
+document.getElementById("preview");
+
+const photo =
+document.getElementById("photo");
+
+const nameBox =
+document.getElementById("name");
+
+photo.onchange=function(){
+
+const file=this.files[0];
+
+if(file){
+
+preview.src=
+URL.createObjectURL(file);
+
+}
+
+};
+
+
+async function loadProfile(){
+
+const res=
+await fetch("/auth/user");
+
+const data=
+await res.json();
+
+if(!data.loggedIn){
+
+location.href="/";
+
+return;
+
+}
+
+nameBox.value=
+data.user.name||"";
+
+preview.src=
+data.user.picture||"";
+
+}
+
+loadProfile();
+
+
+document
+.getElementById("saveBtn")
+.onclick=
+async function(){
+
+const formData=
+new FormData();
+
+formData.append(
+"displayName",
+nameBox.value
+);
+
+if(photo.files.length){
+
+formData.append(
+"avatar",
+photo.files[0]
+);
+
+}
+
+const res=
+await fetch(
+"/auth/profile-update",
+{
+
+method:"POST",
+
+body:formData
+
+});
+
+const data=
+await res.json();
+
+if(data.success){
+
+alert("Profile Updated");
+
+location.reload();
+
+}
+else{
+
+alert(data.message);
+
+}
+
+};
+
+</script>
+
+</body>
+
+</html>

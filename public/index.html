@@ -54,20 +54,84 @@
 </head>
 
 <body>
+    <div id="loginModal" class="modal">
+
+    <div class="modalBox">
+
+        <h2>
+            Welcome to Silk Road
+        </h2>
+
+        <p>
+            Choose how you want to continue
+        </p>
+
+
+        <button id="googleLoginBtn">
+            Continue with Google
+        </button>
+
+
+        <br><br>
+
+
+        <button id="guestLoginBtn">
+            Continue as Guest
+        </button>
+
+
+    </div>
+
+</div>
 
 <div class="container">
 
     <header class="header">
 
-        <h1>Silk Road</h1>
+    <h1>Silk Road</h1>
 
-        <p>Anonymous Video, Voice & Text Chat</p>
+    <p>Anonymous Video, Voice & Text Chat</p>
 
-        <div id="onlineCount">
-            Online: 0
-        </div>
+    <div id="onlineCount">
+        Online: 0
+    </div>
 
-    </header>
+    <div id="userProfile" class="hidden">
+
+    <img
+        id="userAvatar"
+        src=""
+        alt="Profile Picture"
+        width="45"
+        height="45"
+        style="border-radius:50%;object-fit:cover;">
+
+    <div style="display:inline-block;margin-left:10px;vertical-align:middle;">
+
+        <div id="userName"></div>
+
+        <a
+            href="/profile.html"
+            id="profileLink"
+            style="color:#4CAF50;text-decoration:none;font-size:14px;">
+
+            Edit Profile
+
+        </a>
+
+    </div>
+
+    <button
+        id="logoutBtn"
+        style="margin-left:15px;">
+
+        Logout
+
+    </button>
+
+</div>
+
+</header>
 
     <section id="home" class="card">
 

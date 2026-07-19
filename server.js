@@ -8,6 +8,10 @@ Production Version
 */
 
 require("dotenv").config();
+const session = require("express-session");
+const passport = require("passport");
+
+require("./config/passport")(passport);
 
 const path = require("path");
 const http = require("http");
@@ -33,6 +37,35 @@ Express
 */
 
 const app = express();
+app.use(
+    session({
+
+        secret: process.env.SESSION_SECRET,
+
+        resave: false,
+
+        saveUninitialized: false,
+
+        cookie: {
+
+            secure: false,
+
+            maxAge: 24 * 60 * 60 * 1000
+
+        }
+
+    })
+);
+
+
+app.use(passport.initialize());
+
+app.use(passport.session());
+/*
+======================================================
+Google Authentication
+======================================================
+*/
 
 const server = http.createServer(app);
 
@@ -119,17 +152,28 @@ Parsers
 ======================================================
 */
 
-app.use(express.json());
+app.use(express.json({
+    limit:"5mb"
+}));
 
 
 app.use(
-
     express.urlencoded({
-
-        extended: true
-
+        extended:true,
+        limit:"5mb"
     })
+);
 
+
+/*
+======================================================
+Google Authentication Routes
+======================================================
+*/
+
+app.use(
+    "/auth",
+    require("./routes/google")
 );
 
 
@@ -304,33 +348,7 @@ app.get("/health", (req, res) => {
 
 /*
 ======================================================
-Home
-======================================================
-*/
-
-app.get("/", (req, res) => {
-
-    res.sendFile(
-
-        path.join(
-
-            __dirname,
-
-            "public",
-
-            "index.html"
-
-        )
-
-    );
-
-});
-
-
-
-/*
-======================================================
-404
+404 Handler
 ======================================================
 */
 

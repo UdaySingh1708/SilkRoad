@@ -1,4 +1,211 @@
 "use strict";
+
+
+/*
+=====================================
+Silk Road Login System
+=====================================
+*/
+
+
+let loginModal;
+let googleLoginBtn;
+let guestLoginBtn;
+let userProfile;
+let userAvatar;
+let userName;
+let logoutBtn;
+
+
+function hideLogin(){
+
+    if(loginModal){
+
+        loginModal.classList.add("hidden");
+
+    }
+
+}
+
+
+
+function initLogin(){
+
+
+    loginModal =
+    document.getElementById("loginModal");
+
+
+    googleLoginBtn =
+    document.getElementById("googleLoginBtn");
+
+
+    guestLoginBtn =
+    document.getElementById("guestLoginBtn");
+
+
+    userProfile =
+document.getElementById("userProfile");
+
+userAvatar =
+document.getElementById("userAvatar");
+
+userName =
+document.getElementById("userName");
+
+logoutBtn =
+document.getElementById("logoutBtn");
+
+
+
+    if(googleLoginBtn){
+
+        googleLoginBtn.addEventListener(
+            "click",
+            ()=>{
+
+                window.location.href =
+                "/auth/google";
+
+            }
+        );
+if (logoutBtn) {
+
+    logoutBtn.addEventListener("click", async () => {
+
+        try {
+
+            await fetch("/auth/logout", {
+                method: "POST"
+            });
+
+        } catch (err) {
+
+            console.log(err);
+
+        }
+
+        localStorage.removeItem("silkGoogleUser");
+        localStorage.removeItem("silkGuestId");
+
+        window.location.reload();
+
+    });
+
+}
+    }
+
+
+
+    if(guestLoginBtn){
+
+        guestLoginBtn.addEventListener(
+            "click",
+            ()=>{
+
+
+                const guestId =
+                "guest_" +
+                Math.random()
+                .toString(36)
+                .substring(2,12);
+
+
+
+                localStorage.setItem(
+                    "silkGuestId",
+                    guestId
+                );
+
+
+                hideLogin();
+
+
+            }
+        );
+
+    }
+
+
+
+    checkLogin();
+
+
+}
+
+
+
+async function checkLogin(){
+
+
+    try{
+
+
+        const response =
+        await fetch("/auth/user");
+
+
+
+        const data =
+        await response.json();
+
+
+
+        if (data.loggedIn) {
+
+    localStorage.setItem(
+        "silkGoogleUser",
+        JSON.stringify(data.user)
+    );
+
+    hideLogin();
+
+    userProfile.classList.remove("hidden");
+
+    userAvatar.src = data.user.picture || "/favicon.ico";
+
+userName.textContent = data.user.name;
+
+    return;
+}
+
+
+
+        const guest =
+        localStorage.getItem(
+            "silkGuestId"
+        );
+
+
+
+        if(guest){
+
+            hideLogin();
+
+        }
+
+
+    }
+
+    catch(err){
+
+        console.log(
+            "Login check error",
+            err
+        );
+
+    }
+
+
+}
+
+
+
+window.addEventListener("load", () => {
+
+    initLogin();
+
+});
 /*
 ==========================================
 Socket
