@@ -3,67 +3,48 @@
 const GoogleStrategy = require("passport-google-oauth20").Strategy;
 const User = require("../models/User");
 
-module.exports = function(passport) {
+module.exports = function (passport) {
+
+    console.log("CLIENT_ID:", JSON.stringify(process.env.GOOGLE_CLIENT_ID));
+    console.log("CLIENT_SECRET exists:", !!process.env.GOOGLE_CLIENT_SECRET);
+    console.log("CALLBACK_URL:", JSON.stringify(process.env.GOOGLE_CALLBACK_URL));
 
     passport.use(
         new GoogleStrategy(
             {
                 clientID: process.env.GOOGLE_CLIENT_ID,
                 clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-                callbackURL:
-    process.env.GOOGLE_CALLBACK_URL
+                callbackURL: process.env.GOOGLE_CALLBACK_URL
             },
 
-            async function(accessToken, refreshToken, profile, done) {
+            async function (accessToken, refreshToken, profile, done) {
 
                 try {
 
                     let user = await User.findOne({
-    $or: [
-        {
-            googleId: profile.id
-        },
-        {
-            userId: "google_" + profile.id
-        }
-    ]
-});
-
+                        $or: [
+                            { googleId: profile.id },
+                            { userId: "google_" + profile.id }
+                        ]
+                    });
 
                     if (!user) {
 
                         user = await User.create({
-
-    userId:
-        "google_" + profile.id,
-
-    googleId:
-        profile.id,
-
-    email:
-        profile.emails[0].value,
-
-    displayName:
-        profile.displayName,
-
-    avatar:
-        profile.photos[0].value,
-
-    accountType:
-        "google",
-
-    isProfileComplete:
-        false
-
-});
+                            userId: "google_" + profile.id,
+                            googleId: profile.id,
+                            email: profile.emails[0].value,
+                            displayName: profile.displayName,
+                            avatar: profile.photos[0].value,
+                            accountType: "google",
+                            isProfileComplete: false
+                        });
 
                     }
 
-
                     return done(null, user);
 
-
-                } catch(error) {
+                } catch (error) {
 
                     return done(error, null);
 
@@ -73,23 +54,20 @@ module.exports = function(passport) {
         )
     );
 
-
-    passport.serializeUser((user, done)=>{
+    passport.serializeUser((user, done) => {
         done(null, user.id);
     });
 
-
-    passport.deserializeUser(async(id, done)=>{
+    passport.deserializeUser(async (id, done) => {
 
         try {
 
             const user = await User.findById(id);
+            done(null, user);
 
-            done(null,user);
+        } catch (error) {
 
-        } catch(error){
-
-            done(error,null);
+            done(error, null);
 
         }
 
