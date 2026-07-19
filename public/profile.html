@@ -99,12 +99,27 @@ type="text"
 id="name"
 placeholder="Your name">
 
+<p id="email"></p>
+
+<p>
+Account Type:
+<span id="accountType"></span>
+</p>
+
 <button
 id="saveBtn">
 
 Save Changes
 
 </button>
+
+<button
+id="logoutBtn">
+
+Logout
+
+</button>
+
 
 <button
 class="back"
@@ -126,6 +141,13 @@ document.getElementById("photo");
 
 const nameBox =
 document.getElementById("name");
+
+const emailBox =
+document.getElementById("email");
+
+
+const accountBox =
+document.getElementById("accountType");
 
 photo.onchange=function(){
 
@@ -157,11 +179,20 @@ return;
 
 }
 
-nameBox.value=
-data.user.name||"";
+nameBox.value =
+data.user.name || "";
 
-preview.src=
-data.user.picture||"";
+
+preview.src =
+data.user.picture || "/default-avatar.png";
+
+
+emailBox.textContent =
+data.user.email || "No email";
+
+
+accountBox.textContent =
+data.user.accountType || "guest";
 
 }
 
@@ -216,6 +247,25 @@ else{
 alert(data.message);
 
 }
+
+};
+
+document
+.getElementById("logoutBtn")
+.onclick =
+async function(){
+
+
+await fetch(
+"/auth/logout",
+{
+method:"POST"
+}
+);
+
+
+location.href="/";
+
 
 };
 
