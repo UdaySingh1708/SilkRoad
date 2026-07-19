@@ -7,9 +7,7 @@ const userSchema = new mongoose.Schema({
     userId: {
 
         type: String,
-
         required: true,
-
         unique: true
 
     },
@@ -17,7 +15,6 @@ const userSchema = new mongoose.Schema({
     googleId: {
 
         type: String,
-
         default: null
 
     },
@@ -25,15 +22,14 @@ const userSchema = new mongoose.Schema({
     email: {
 
         type: String,
-
-        default: ""
+        default: null,
+        sparse: true
 
     },
 
     displayName: {
 
         type: String,
-
         default: ""
 
     },
@@ -41,7 +37,6 @@ const userSchema = new mongoose.Schema({
     avatar: {
 
         type: String,
-
         default: ""
 
     },
@@ -49,7 +44,6 @@ const userSchema = new mongoose.Schema({
     accountType: {
 
         type: String,
-
         default: "guest"
 
     },
@@ -57,7 +51,6 @@ const userSchema = new mongoose.Schema({
     isProfileComplete: {
 
         type: Boolean,
-
         default: false
 
     },
@@ -65,12 +58,12 @@ const userSchema = new mongoose.Schema({
     createdAt: {
 
         type: Date,
-
         default: Date.now
 
     }
 
 });
+
 
 module.exports = mongoose.model(
     "User",

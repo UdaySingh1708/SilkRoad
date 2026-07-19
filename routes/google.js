@@ -15,23 +15,50 @@ Multer
 ================================
 */
 
+const fs = require("fs");
+
+
+const uploadPath = path.join(
+    __dirname,
+    "..",
+    "public",
+    "uploads"
+);
+
+
+// Create uploads folder if missing
+
+if (!fs.existsSync(uploadPath)) {
+
+    fs.mkdirSync(uploadPath, {
+        recursive: true
+    });
+
+}
+
+
 const storage = multer.diskStorage({
 
     destination: function(req, file, cb){
 
-    cb(null, path.join(__dirname, "..", "public", "uploads"));
+        cb(null, uploadPath);
 
-},
+    },
+
 
     filename: function(req, file, cb){
 
         const ext = path.extname(file.originalname);
 
-        cb(null, Date.now() + ext);
+        cb(
+            null,
+            Date.now() + ext
+        );
 
     }
 
 });
+
 
 const upload = multer({
 
