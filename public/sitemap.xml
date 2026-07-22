@@ -1,18 +1,60 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<urlset
-xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 
-<url>
+    <url>
+        <loc>https://silkroadchat.onrender.com/</loc>
+        <lastmod>2026-07-22</lastmod>
+        <changefreq>daily</changefreq>
+        <priority>1.0</priority>
+    </url>
 
-<loc>https://silkroadchat.onrender.com/</loc>
+    <url>
+        <loc>https://silkroadchat.onrender.com/about.html</loc>
+        <changefreq>monthly</changefreq>
+        <priority>0.8</priority>
+    </url>
 
-<lastmod>2026-07-12</lastmod>
+    <url>
+        <loc>https://silkroadchat.onrender.com/privacy.html</loc>
+        <changefreq>yearly</changefreq>
+        <priority>0.5</priority>
+    </url>
 
-<changefreq>daily</changefreq>
+    <url>
+        <loc>https://silkroadchat.onrender.com/terms.html</loc>
+        <changefreq>yearly</changefreq>
+        <priority>0.5</priority>
+    </url>
 
-<priority>1.0</priority>
+    <url>
+        <loc>https://silkroadchat.onrender.com/community.html</loc>
+        <changefreq>monthly</changefreq>
+        <priority>0.7</priority>
+    </url>
 
-</url>
+    <url>
+        <loc>https://silkroadchat.onrender.com/safety.html</loc>
+        <changefreq>monthly</changefreq>
+        <priority>0.7</priority>
+    </url>
+
+    <url>
+        <loc>https://silkroadchat.onrender.com/faq.html</loc>
+        <changefreq>monthly</changefreq>
+        <priority>0.7</priority>
+    </url>
+
+    <url>
+        <loc>https://silkroadchat.onrender.com/cookies.html</loc>
+        <changefreq>yearly</changefreq>
+        <priority>0.5</priority>
+    </url>
+
+    <url>
+        <loc>https://silkroadchat.onrender.com/contact.html</loc>
+        <changefreq>yearly</changefreq>
+        <priority>0.5</priority>
+    </url>
 
 </urlset>
