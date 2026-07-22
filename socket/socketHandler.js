@@ -1,5 +1,6 @@
 "use strict";
 
+const onlineUsers = require("./onlineUsers");
 const User = require("../models/User");
 const Ban = require("../models/Ban");
 const Report = require("../models/Report");
@@ -23,6 +24,35 @@ module.exports = function (io) {
         }
 
         socket.userId = userId;
+onlineUsers.set(userId, socket.id);
+io.emit("friendsStatusChanged");
+
+try {
+
+    await User.findOneAndUpdate(
+        { userId },
+        {
+            userId,
+            onlineStatus:true
+        },
+        {
+            upsert:true
+        }
+    );
+
+} catch(err){
+
+    console.error(
+        "Online status error:",
+        err.message
+    );
+
+}
+
+
+io.emit("friendOnline", {
+    userId
+});
 
         socket.preferences = {
             language: "Any",
@@ -453,11 +483,41 @@ module.exports = function (io) {
         =====================================
         */
 
-        socket.on("disconnect", () => {
+        socket.on("disconnect", async () => {
 
-            messageCooldown.delete(socket.id);
 
-            const partner = matchMaker.remove(socket.id);
+            onlineUsers.delete(socket.userId);
+io.emit("friendsStatusChanged");
+
+            try {
+
+    await User.findOneAndUpdate(
+        {
+            userId:socket.userId
+        },
+        {
+            onlineStatus:false
+        }
+    );
+
+
+} catch(err){
+
+    console.error(
+        "Offline status error:",
+        err.message
+    );
+
+}
+
+
+io.emit("friendOffline", {
+    userId:socket.userId
+});
+
+messageCooldown.delete(socket.id);
+
+const partner = matchMaker.remove(socket.id);
 
             if (partner) {
 

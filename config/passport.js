@@ -21,28 +21,58 @@ callbackURL: process.env.GOOGLE_CALLBACK_URL.trim(),
 
                 try {
 
-                    let user = await User.findOne({
-                        $or: [
-                            { googleId: profile.id },
-                            { userId: "google_" + profile.id }
-                        ]
-                    });
+                    const googleUserId = "google_" + profile.id;
 
-                    if (!user) {
+let user = await User.findOne({
+    $or: [
+        { googleId: profile.id },
+        { userId: googleUserId }
+    ]
+});
 
-                        user = await User.create({
-                            userId: "google_" + profile.id,
-                            googleId: profile.id,
-                            email: profile.emails[0].value,
-                            displayName: profile.displayName,
-                            avatar: profile.photos[0].value,
-                            accountType: "google",
-                            isProfileComplete: false
-                        });
+if (!user) {
 
-                    }
+    user = await User.create({
 
-                    return done(null, user);
+        userId: googleUserId,
+
+        googleId: profile.id,
+
+        email: profile.emails?.[0]?.value || "",
+
+        displayName: profile.displayName,
+
+        avatar: profile.photos?.[0]?.value || "",
+
+        accountType: "google",
+
+        isProfileComplete: false
+
+    });
+
+} else {
+
+    user.googleId = profile.id;
+
+    user.userId = googleUserId;
+
+    user.email = profile.emails?.[0]?.value || user.email;
+
+    user.displayName = profile.displayName;
+
+    user.avatar = profile.photos?.[0]?.value || user.avatar;
+
+    user.accountType = "google";
+
+    await user.save();
+
+}
+
+return done(null, user);
+console.log("Passport user before done:", {
+    userId: user.userId,
+    accountType: user.accountType
+});
 
                 } catch (error) {
 

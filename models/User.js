@@ -55,6 +55,14 @@ const userSchema = new mongoose.Schema({
 
     },
 
+    onlineStatus: {
+
+    type: Boolean,
+
+    default: false
+
+},
+
     createdAt: {
 
         type: Date,

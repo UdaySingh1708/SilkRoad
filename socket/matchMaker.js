@@ -74,7 +74,13 @@ Exports
 ==========================================
 */
 
+function getPartnersMap() {
+    return partners;
+}
+
 module.exports = {
+    
+getPartnersMap,
 
     find(id, sockets) {
 

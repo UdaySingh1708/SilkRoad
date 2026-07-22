@@ -157,7 +157,7 @@ async function checkLogin(){
         "silkGoogleUser",
         JSON.stringify(data.user)
     );
-
+await connectUserSocket();
     hideLogin();
 
     userProfile.classList.remove("hidden");
@@ -201,9 +201,13 @@ userName.textContent = data.user.name;
 
 
 
-window.addEventListener("load", () => {
+window.addEventListener("load", async () => {
 
     initLogin();
+
+    await loadRequests();
+
+await loadFriends();
 
 });
 /*
@@ -212,9 +216,50 @@ Socket
 ==========================================
 */
 
-const socket = io({
-    transports: ["websocket", "polling"]
+let socket = io({
+
+    autoConnect:false,
+
+    transports:[
+        "websocket",
+        "polling"
+    ]
+
 });
+
+
+async function connectUserSocket(){
+
+
+    const savedUser =
+    localStorage.getItem("silkGoogleUser");
+
+
+    if(!savedUser){
+        return;
+    }
+
+
+    const user =
+    JSON.parse(savedUser);
+
+
+    socket.auth = {
+
+        userId:user.id
+
+    };
+
+
+    if(!socket.connected){
+
+        socket.connect();
+
+    }
+
+
+}
+
 
 
 /*
@@ -229,6 +274,7 @@ const nextBtn = document.getElementById("nextBtn");
 const disconnectBtn = document.getElementById("disconnectBtn");
 const reportBtn = document.getElementById("reportBtn");
 const blockBtn = document.getElementById("blockBtn");
+const addFriendBtn = document.getElementById("addFriendBtn");
 
 const home = document.getElementById("home");
 const chat = document.getElementById("chat");
@@ -239,7 +285,9 @@ const messages = document.getElementById("messages");
 
 const input = document.getElementById("messageInput");
 const onlineCount = document.getElementById("onlineCount");
-
+const friendsList = document.getElementById("friendsList");
+const friendRequests =
+document.getElementById("friendRequests");
 const ageModal = document.getElementById("ageModal");
 const ageConfirm = document.getElementById("ageConfirm");
 const continueBtn = document.getElementById("continueBtn");
@@ -263,6 +311,7 @@ let peer = null;
 
 let connected = false;
 
+let currentPartnerId = null;
 
 const rtcConfig = {
     iceServers: [
@@ -612,70 +661,45 @@ function endPeer(){
 
 
 
-
 /*
 ==========================================
 Socket Events
 ==========================================
 */
 
+socket.on("matched", async ({ initiator, partnerId }) => {
 
-socket.on("matched", async ({initiator})=>{
+    currentPartnerId = partnerId;
 
+    if (addFriendBtn) {
+        addFriendBtn.disabled = false;
+    }
 
-    connected=true;
-
+    connected = true;
 
     clearMessages();
 
+    typing.textContent = "";
 
-    typing.textContent="";
+    setStatus("Connected");
 
+    try {
 
-    setStatus(
-        "Connected"
-    );
-
-
-
-    try{
-
-
-        if(!localStream){
-
+        if (!localStream) {
             await startMedia();
-
         }
 
-
-
-        if(!peer){
-
+        if (!peer) {
             createPeer();
-
         }
 
-
-
-        if(initiator){
-
-
+        if (initiator) {
             await createOffer();
-
-
         }
 
-
-
-    }
-
-    catch(err){
-
+    } catch (err) {
         console.error(err);
-
     }
-
-
 
 });
 
@@ -892,6 +916,13 @@ socket.on("stopTyping",()=>{
 
 socket.on("partnerLeft",()=>{
 
+currentPartnerId = null;
+
+if(addFriendBtn){
+
+    addFriendBtn.disabled = true;
+
+}
 
     connected=false;
 
@@ -928,9 +959,36 @@ socket.on("onlineCount",(count)=>{
 });
 
 
+socket.on("friendAccepted", async () => {
+
+    await loadFriends();
+
+    await loadRequests();
+
+});
+
+socket.on("friendsStatusChanged", () => {
+    loadFriends();
+});
+
+/*
+=====================================
+Friend Request Notification
+=====================================
+*/
+
+socket.on("friendRequest", async(data)=>{
 
 
+    alert(
+        "New friend request received!"
+    );
 
+
+    await loadRequests();
+
+
+});
 
 
 socket.on("pongServer",()=>{
@@ -1319,7 +1377,44 @@ disconnectBtn.addEventListener(
 
 
 
+/*
+==========================================
+Add Friend
+==========================================
+*/
 
+if (addFriendBtn) {
+
+    addFriendBtn.disabled = true;
+
+    addFriendBtn.addEventListener("click", async () => {
+
+        try {
+
+            const response = await fetch("/friends/request", {
+                method: "POST",
+                credentials: "include"
+            });
+
+            const data = await response.json();
+
+            alert(data.message);
+
+            if (data.success) {
+                addFriendBtn.disabled = true;
+            }
+
+        } catch (err) {
+
+            console.log(err);
+
+            alert("Failed to send friend request.");
+
+        }
+
+    });
+
+}
 
 
 /*
@@ -1605,7 +1700,204 @@ muteBtn.addEventListener(
 
 
 
+/*
+==========================================
+Load Friends
+==========================================
+*/
 
+async function loadFriends() {
+
+    if (!friendsList) return;
+
+    try {
+
+        const response = await fetch("/friends");
+
+        const data = await response.json();
+
+        if (!data.success) {
+
+            friendsList.innerHTML = "No friends.";
+
+            return;
+
+        }
+
+        if (data.friends.length === 0) {
+
+            friendsList.innerHTML = "No friends yet.";
+
+            return;
+
+        }
+
+        friendsList.innerHTML = "";
+
+        data.friends.forEach(friend => {
+
+            const card = document.createElement("div");
+
+            card.className = "friendCard";
+
+            card.innerHTML = `
+                <img src="${friend.avatar || "/favicon.ico"}">
+                <div class="friendInfo">
+                    <div class="friendName">${friend.displayName || "Unknown User"}</div>
+                    <div class="friendStatus ${friend.onlineStatus ? "online" : "offline"}">
+                        ${friend.onlineStatus ? "● Online" : "● Offline"}
+                    </div>
+                </div>
+            `;
+
+            friendsList.appendChild(card);
+
+        });
+
+    } catch (err) {
+
+        console.log(err);
+
+        friendsList.innerHTML = "Unable to load friends.";
+
+    }
+
+}
+
+
+/*
+==========================================
+Friend Requests
+==========================================
+*/
+
+async function loadRequests() {
+
+    if (!friendRequests) return;
+
+    try {
+
+        const response =
+        await fetch("/friends/requests");
+
+        const data =
+        await response.json();
+
+        if (!data.success) {
+
+            friendRequests.innerHTML =
+            "No requests";
+
+            return;
+
+        }
+
+        if (data.requests.length === 0) {
+
+            friendRequests.innerHTML =
+            "No requests";
+
+            return;
+
+        }
+
+        friendRequests.innerHTML = "";
+
+        data.requests.forEach(request => {
+
+            const div =
+            document.createElement("div");
+
+            div.className =
+            "friendCard";
+
+            div.innerHTML = `
+
+                <img src="${request.avatar}">
+
+                <div class="friendInfo">
+
+                    <div class="friendName">
+
+                        ${request.displayName}
+
+                    </div>
+
+                    <button class="acceptBtn"
+                    data-id="${request._id}">
+
+                        Accept
+
+                    </button>
+
+                    <button class="declineBtn"
+                    data-id="${request._id}">
+
+                        Decline
+
+                    </button>
+
+                </div>
+
+            `;
+
+            friendRequests.appendChild(div);
+
+        });
+
+        document
+        .querySelectorAll(".acceptBtn")
+        .forEach(btn => {
+
+            btn.onclick =
+            async () => {
+
+                await fetch(
+"/friends/accept/" + btn.dataset.id,
+{
+    method:"POST",
+    credentials:"include"
+}
+);
+
+                loadRequests();
+
+                loadFriends();
+
+            };
+
+        });
+
+        document
+        .querySelectorAll(".declineBtn")
+        .forEach(btn => {
+
+            btn.onclick =
+            async () => {
+
+                await fetch(
+                    "/friends/decline/" +
+                    btn.dataset.id,
+                    {
+                        method:"POST"
+                    }
+                );
+
+                loadRequests();
+
+            };
+
+        });
+
+    }
+
+    catch(err){
+
+        console.log(err);
+
+    }
+
+}
 
 
 
