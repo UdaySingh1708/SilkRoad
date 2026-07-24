@@ -549,3 +549,20 @@ button:hover{
     font-weight:bold;
 
 }
+
+
+.ad-banner{
+    width:100%;
+    max-width:1200px;
+    margin:20px auto;
+    padding:0 15px;
+    box-sizing:border-box;
+}
+
+.ad-banner img{
+    width:100%;
+    height:auto;
+    display:block;
+    border-radius:12px;
+    box-shadow:0 5px 15px rgba(0,0,0,.2);
+}
